@@ -1493,7 +1493,7 @@ function agency() {
       };
     },
 
-    async fetchPortfolio() {
+    async fetchPortfolio(retryCount = 0) {
       if (this.loading) return;
       this.loading  = true;
       this.apiError = null;
@@ -1513,9 +1513,16 @@ function agency() {
         this.lastUpdated = new Date();
         this.$nextTick(() => this.initPortfolioChart());
       } catch (e) {
-        this.apiError = e.message;
         this.liveMode = false;
-        // Silently fall back to mock data already in this.clients
+        // Server may still be waking up (cold start) — retry up to 4 times
+        if (retryCount < 4) {
+          const delay = [8000, 12000, 15000, 20000][retryCount];
+          this.apiError = `Server waking up… retrying in ${delay / 1000}s`;
+          this.loading = false;
+          setTimeout(() => this.fetchPortfolio(retryCount + 1), delay);
+          return;
+        }
+        this.apiError = e.message;
       } finally {
         this.loading = false;
       }
