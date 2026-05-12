@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: sovereign-dashboard
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn server:app
+    envVars:
+      - key: META_ACCESS_TOKEN
+        sync: false
+      - key: META_APP_ID
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: DASHBOARD_URL
+        sync: false

@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AdPulse — Client Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' }</script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    body { background-color: #07090f; color: #e2e8f0; font-family: system-ui, -apple-system, sans-serif; }
+    .card  { background: #0d1220; border: 1px solid #1a2338; border-radius: 12px; }
+    .card2 { background: #090d18; border: 1px solid #151e2e; border-radius: 8px; }
+    .sidebar-bg { background: #060810; border-right: 1px solid #1a2338; }
+    [x-cloak] { display: none !important; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #1e2a3a; border-radius: 4px; }
+
+    .nav-item { transition: all 0.15s; border-right: 2px solid transparent; }
+    .nav-item:hover { background: rgba(99,102,241,.08); color: #c7d2fe; }
+    .nav-item.active { background: rgba(99,102,241,.15); border-right-color: #6366f1; color: #a5b4fc; }
+
+    /* GHL badge */
+    .ghl-badge { background: linear-gradient(135deg, rgba(255,128,0,.15), rgba(255,90,0,.08)); border: 1px solid rgba(255,128,0,.3); }
+    .apify-badge { background: rgba(0,196,154,.08); border: 1px solid rgba(0,196,154,.25); }
+
+    /* Status */
+    .s-active   { background:rgba(16,185,129,.12);  color:#10b981; border:1px solid rgba(16,185,129,.3); }
+    .s-paused   { background:rgba(245,158,11,.12);  color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
+    .s-learning { background:rgba(99,102,241,.12);  color:#818cf8; border:1px solid rgba(99,102,241,.3); }
+
+    /* Pipeline stages */
+    .stage-new      { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+    .stage-contacted{ background:rgba(59,130,246,.08);  border:1px solid rgba(59,130,246,.2); }
+    .stage-quoted   { background:rgba(245,158,11,.08);  border:1px solid rgba(245,158,11,.2); }
+    .stage-booked   { background:rgba(99,102,241,.08);  border:1px solid rgba(99,102,241,.2); }
+    .stage-won      { background:rgba(16,185,129,.08);  border:1px solid rgba(16,185,129,.2); }
+
+    /* Scrape cards */
+    .scrape-card { transition: border-color .2s, transform .2s; }
+    .scrape-card:hover { border-color: rgba(99,102,241,.5); transform: translateY(-2px); }
+
+    /* Video thumb gradients */
+    .thumb-1 { background: linear-gradient(135deg, #1e3a5f, #0d2137); }
+    .thumb-2 { background: linear-gradient(135deg, #2d1b69, #1a0d4a); }
+    .thumb-3 { background: linear-gradient(135deg, #0d3320, #061d12); }
+    .thumb-4 { background: linear-gradient(135deg, #3b1f0a, #1e1005); }
+    .thumb-5 { background: linear-gradient(135deg, #1f0d3b, #0d0620); }
+    .thumb-fb1 { background: linear-gradient(135deg, #0a2d4a, #051828); }
+    .thumb-fb2 { background: linear-gradient(135deg, #2a1a08, #160d04); }
+    .thumb-fb3 { background: linear-gradient(135deg, #0d2b1a, #061510); }
+    .thumb-fb4 { background: linear-gradient(135deg, #1a0a2e, #0d0518); }
+    .thumb-fb5 { background: linear-gradient(135deg, #0d2040, #060f20); }
+
+    .metric-up   { color: #10b981; }
+    .metric-down { color: #ef4444; }
+    .metric-warn { color: #f59e0b; }
+    tr:hover td { background: rgba(255,255,255,.015); }
+    .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .line-clamp-3 { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  </style>
+</head>
+<body x-data="clientDash()" class="flex h-screen overflow-hidden">
+
+<!-- ═══════ SIDEBAR ═══════ -->
+<aside class="sidebar-bg w-56 flex-shrink-0 flex flex-col overflow-y-auto">
+
+  <!-- Agency brand — always top left -->
+  <div class="p-4 border-b border-[#1a2338]">
+    <div class="flex items-center gap-2.5 mb-3">
+      <div class="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+        <svg class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11 4a1 1 0 10-2 0v4a1 1 0 102 0V7zm-3 1a1 1 0 10-2 0v3a1 1 0 102 0V8zM8 9a1 1 0 00-2 0v2a1 1 0 102 0V9z" clip-rule="evenodd"/></svg>
+      </div>
+      <span class="font-bold text-white text-sm">AdPulse</span>
+    </div>
+    <!-- Client name -->
+    <div class="bg-[#0d1220] border border-[#1a2338] rounded-lg p-2.5">
+      <p class="text-xs text-gray-500 mb-0.5">Client Portal</p>
+      <p class="text-sm font-bold text-white" x-text="client.name"></p>
+      <p class="text-xs text-gray-500" x-text="client.city"></p>
+    </div>
+  </div>
+
+  <!-- GHL sync status -->
+  <div class="px-3 pt-3">
+    <div class="ghl-badge rounded-lg p-2.5 flex items-center gap-2">
+      <div class="w-5 h-5 rounded flex items-center justify-center flex-shrink-0" style="background:rgba(255,128,0,.2)">
+        <svg class="w-3 h-3 text-orange-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-semibold text-orange-300">GoHighLevel</p>
+        <p class="text-xs text-gray-500">Synced 4 min ago</p>
+      </div>
+      <div class="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0"></div>
+    </div>
+  </div>
+
+  <nav class="flex-1 p-2.5 space-y-0.5 mt-2">
+    <p class="text-xs font-semibold text-gray-600 uppercase tracking-wider px-3 pb-1.5">Dashboard</p>
+
+    <button @click="activeTab='ads'; $nextTick(()=>initAdsChart())"
+      :class="['nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-l-lg text-sm font-medium text-left', activeTab==='ads'?'active':'text-gray-400']">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+      Ad Performance
+    </button>
+
+    <button @click="activeTab='instagram'"
+      :class="['nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-l-lg text-sm font-medium text-left', activeTab==='instagram'?'active':'text-gray-400']">
+      <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+      Organic — Instagram
+      <span class="ml-auto text-xs bg-[#0a0e18] text-gray-500 border border-[#1a2338] px-1.5 py-0.5 rounded-full">5 posts</span>
+    </button>
+
+    <button @click="activeTab='facebook'"
+      :class="['nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-l-lg text-sm font-medium text-left', activeTab==='facebook'?'active':'text-gray-400']">
+      <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+      Organic — Facebook
+      <span class="ml-auto text-xs bg-[#0a0e18] text-gray-500 border border-[#1a2338] px-1.5 py-0.5 rounded-full">5 posts</span>
+    </button>
+  </nav>
+
+  <div class="p-3 border-t border-[#1a2338]">
+    <div class="px-2 py-1.5">
+      <p class="text-xs text-gray-600">Powered by</p>
+      <p class="text-xs font-semibold text-gray-400">AdPulse · Auto Restyling</p>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════ MAIN ═══════ -->
+<main class="flex-1 flex flex-col overflow-hidden">
+
+  <!-- Header -->
+  <header class="border-b border-[#1a2338] px-6 py-3 flex items-center gap-4" style="background:#07090f">
+    <div class="flex-1">
+      <h1 class="text-base font-bold text-white"
+        x-text="activeTab==='ads'?client.name+' — Ad Performance':activeTab==='instagram'?'Organic Ideation — Instagram':'Organic Ideation — Facebook'"></h1>
+      <p class="text-xs text-gray-500" x-text="client.niche+' · '+client.city"></p>
+    </div>
+    <div class="flex items-center gap-2">
+      <!-- GHL sync button -->
+      <button x-show="activeTab==='ads'" class="ghl-badge flex items-center gap-2 text-xs text-orange-300 font-semibold px-3 py-1.5 rounded-lg hover:border-orange-500/50 transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        Sync GHL
+      </button>
+      <!-- Apify refresh -->
+      <button x-show="activeTab!=='ads'" @click="scraping=true; setTimeout(()=>scraping=false,2400)"
+        :class="['apify-badge flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors', scraping?'text-teal-400':'text-teal-300 hover:border-teal-500/50']">
+        <svg class="w-3.5 h-3.5" :class="scraping?'animate-spin':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        <span x-text="scraping?'Scraping...':'Re-scrape via Apify'"></span>
+      </button>
+      <span class="text-xs text-gray-600" x-text="new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})"></span>
+    </div>
+  </header>
+
+  <div class="flex-1 overflow-y-auto p-5">
+
+    <!-- ════════════════════════════════
+         TAB 1 — AD PERFORMANCE
+    ════════════════════════════════ -->
+    <div x-show="activeTab==='ads'" x-cloak>
+
+      <!-- GHL banner -->
+      <div class="ghl-badge rounded-xl p-3.5 mb-5 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(255,128,0,.2)">
+          <svg class="w-4 h-4 text-orange-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-bold text-orange-200">GoHighLevel Connected</p>
+          <p class="text-xs text-gray-400">Leads, pipeline, and appointment data pulled live from your GHL account. Meta ad metrics pulled separately from Ads Manager.</p>
+        </div>
+        <div class="text-right flex-shrink-0">
+          <p class="text-xs font-semibold text-orange-300">Last sync: 4 min ago</p>
+          <p class="text-xs text-gray-500">Auto-syncs every 15 min</p>
+        </div>
+      </div>
+
+      <!-- GHL Pipeline KPIs -->
+      <p class="text-xs font-semibold text-orange-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>
+        GoHighLevel — Pipeline Overview
+      </p>
+      <div class="grid grid-cols-5 gap-3 mb-5">
+        <template x-for="s in ghlStats" :key="s.label">
+          <div class="card p-4">
+            <p class="text-xs text-gray-500 font-medium mb-2" x-text="s.label"></p>
+            <p class="text-xl font-bold mb-0.5" :class="s.color" x-text="s.value"></p>
+            <p class="text-xs text-gray-600" x-text="s.sub"></p>
+          </div>
+        </template>
+      </div>
+
+      <!-- GHL Pipeline visual -->
+      <div class="card p-5 mb-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-sm font-semibold text-white">Lead Pipeline <span class="text-xs font-normal text-orange-400 ml-1">via GHL</span></h3>
+            <p class="text-xs text-gray-500">Active opportunities across all stages</p>
+          </div>
+          <p class="text-xs text-gray-500">Total pipeline value: <span class="text-white font-semibold" x-text="totalPipelineValue"></span></p>
+        </div>
+        <div class="flex gap-2">
+          <template x-for="stage in pipeline" :key="stage.name">
+            <div :class="'flex-1 rounded-xl p-3 '+stage.cls">
+              <div class="flex items-center justify-between mb-2">
+                <p class="text-xs font-bold" :class="stage.textColor" x-text="stage.name"></p>
+                <span class="text-xs font-bold text-white" x-text="stage.count"></span>
+              </div>
+              <p class="text-xs text-gray-400 font-semibold" x-text="stage.value"></p>
+              <div class="mt-2 space-y-1.5">
+                <template x-for="lead in stage.leads" :key="lead">
+                  <div class="bg-black/20 rounded px-2 py-1">
+                    <p class="text-xs text-gray-300 truncate" x-text="lead"></p>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Meta Ad KPIs -->
+      <p class="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        Meta Ads — Campaign Performance
+      </p>
+      <div class="grid grid-cols-5 gap-3 mb-5">
+        <template x-for="s in metaStats" :key="s.label">
+          <div class="card p-4">
+            <p class="text-xs text-gray-500 font-medium mb-2" x-text="s.label"></p>
+            <p class="text-xl font-bold text-white mb-0.5" x-text="s.value"></p>
+            <p class="text-xs flex items-center gap-1" :class="s.trend>0?'metric-up':'metric-down'">
+              <span x-text="s.trend>0?'↑':'↓'"></span><span x-text="Math.abs(s.trend)+'%'"></span>
+              <span class="text-gray-600">vs last mo.</span>
+            </p>
+          </div>
+        </template>
+      </div>
+
+      <!-- Chart + Recent leads -->
+      <div class="grid grid-cols-3 gap-4">
+        <div class="card p-5 col-span-2">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-sm font-semibold text-white">Leads Over Time</h3>
+              <p class="text-xs text-gray-500">Meta Ads leads vs GHL appointments confirmed</p>
+            </div>
+            <div class="flex gap-4 text-xs text-gray-500">
+              <span class="flex items-center gap-1.5"><span class="w-3 h-px bg-blue-400 inline-block"></span>Meta Leads</span>
+              <span class="flex items-center gap-1.5"><span class="w-3 h-px bg-orange-400 inline-block"></span>GHL Appointments</span>
+            </div>
+          </div>
+          <canvas id="adsChart" height="90"></canvas>
+        </div>
+
+        <!-- Recent leads from GHL -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-white">Recent Leads <span class="text-xs font-normal text-orange-400">GHL</span></h3>
+            <button class="text-xs text-indigo-400 hover:text-indigo-300">View all →</button>
+          </div>
+          <div class="space-y-2">
+            <template x-for="lead in recentLeads" :key="lead.id">
+              <div class="card2 p-2.5">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs font-semibold text-white truncate" x-text="lead.name"></p>
+                    <p class="text-xs text-gray-500 truncate" x-text="lead.service+' · '+lead.source"></p>
+                  </div>
+                  <span :class="lead.stage==='Booked'?'s-active':lead.stage==='Quoted'?'s-learning':'s-paused'" class="text-xs px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0" x-text="lead.stage"></span>
+                </div>
+                <div class="flex items-center justify-between mt-1.5">
+                  <span class="text-xs text-green-400 font-semibold" x-text="lead.value"></span>
+                  <span class="text-xs text-gray-600" x-text="lead.time"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active campaigns -->
+      <div class="card p-5 mt-4">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-white">Active Campaigns <span class="text-xs font-normal text-blue-400">Meta Ads</span></h3>
+        </div>
+        <table class="w-full text-xs">
+          <thead><tr class="text-left text-gray-500 border-b border-[#1a2338]">
+            <th class="pb-2 font-semibold uppercase tracking-wider">Campaign</th>
+            <th class="pb-2 font-semibold uppercase tracking-wider">Status</th>
+            <th class="pb-2 text-right font-semibold uppercase tracking-wider">Spend MTD</th>
+            <th class="pb-2 text-right font-semibold uppercase tracking-wider">Impressions</th>
+            <th class="pb-2 text-right font-semibold uppercase tracking-wider">CTR</th>
+            <th class="pb-2 text-right font-semibold uppercase tracking-wider">Leads (GHL)</th>
+            <th class="pb-2 text-right font-semibold uppercase tracking-wider">CPL</th>
+            <th class="pb-2 text-right font-semibold uppercase tracking-wider">ROAS</th>
+          </tr></thead>
+          <tbody class="divide-y divide-[#1a2338]">
+            <template x-for="c in campaigns" :key="c.id">
+              <tr>
+                <td class="py-2.5 pr-4"><p class="font-semibold text-gray-200" x-text="c.name"></p><p class="text-gray-600 mt-0.5" x-text="c.objective"></p></td>
+                <td class="py-2.5"><span :class="'s-'+c.status.toLowerCase()" class="text-xs px-2 py-0.5 rounded-full font-semibold" x-text="c.status"></span></td>
+                <td class="py-2.5 text-right text-gray-300" x-text="c.spend"></td>
+                <td class="py-2.5 text-right text-gray-300" x-text="c.impressions"></td>
+                <td class="py-2.5 text-right"><span :class="parseFloat(c.ctr)>=3?'metric-up':'metric-warn'" class="font-semibold" x-text="c.ctr+'%'"></span></td>
+                <td class="py-2.5 text-right font-bold text-white" x-text="c.leads"></td>
+                <td class="py-2.5 text-right"><span :class="parseFloat(c.cpl.replace('$',''))<30?'metric-up':'metric-warn'" class="font-semibold" x-text="c.cpl"></span></td>
+                <td class="py-2.5 text-right"><span :class="parseFloat(c.roas)>=4?'metric-up':'metric-warn'" class="font-bold" x-text="c.roas+'x'"></span></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- GHL field map (collapsible info) -->
+      <div class="mt-4 card p-4">
+        <button @click="showGhlMap=!showGhlMap" class="w-full flex items-center justify-between text-xs text-gray-500 hover:text-gray-300">
+          <span class="flex items-center gap-2">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            GoHighLevel Field Mapping — what data is pulled and how
+          </span>
+          <svg class="w-3.5 h-3.5 transition-transform" :class="showGhlMap?'rotate-180':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div x-show="showGhlMap" x-cloak class="mt-4 grid grid-cols-3 gap-3">
+          <template x-for="m in ghlFieldMap" :key="m.ghl">
+            <div class="card2 p-3">
+              <p class="text-xs text-orange-400 font-semibold mb-0.5" x-text="'GHL: '+m.ghl"></p>
+              <p class="text-xs text-gray-300 font-medium" x-text="'→ '+m.dashboard"></p>
+              <p class="text-xs text-gray-600 mt-1" x-text="m.note"></p>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════
+         TAB 2 — INSTAGRAM IDEATION
+    ════════════════════════════════ -->
+    <div x-show="activeTab==='instagram'" x-cloak>
+
+      <!-- Apify banner -->
+      <div class="apify-badge rounded-xl p-3.5 mb-5 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-teal-950/60">
+          <svg class="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-bold text-teal-200">Apify Instagram Scraper</p>
+          <p class="text-xs text-gray-400">Top 5 most-interacted Reels from auto detailing accounts — scraped by <span class="text-teal-300 font-medium">apify/instagram-scraper</span>. Sorted by likes + comments combined.</p>
+        </div>
+        <div class="text-right flex-shrink-0">
+          <p class="text-xs font-semibold text-teal-300">Last scraped: 2h ago</p>
+          <p class="text-xs text-gray-500">Hashtags: #autodetailing #ceramiccoating</p>
+        </div>
+      </div>
+
+      <!-- Filter / source info -->
+      <div class="flex items-center gap-3 mb-5">
+        <p class="text-xs text-gray-500">Monitoring accounts:</p>
+        <template x-for="acct in igAccounts" :key="acct">
+          <span class="text-xs bg-[#0d1220] border border-[#1a2338] text-gray-300 px-2 py-0.5 rounded-full" x-text="acct"></span>
+        </template>
+        <button class="ml-auto text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Add account
+        </button>
+      </div>
+
+      <!-- 5 scraped cards — 3 top, 2 bottom -->
+      <div class="grid grid-cols-3 gap-4 mb-4">
+        <template x-for="(post, i) in igPosts.slice(0,3)" :key="post.id">
+          <div class="card scrape-card p-0 overflow-hidden">
+            <!-- Thumbnail -->
+            <div :class="'thumb-'+(i+1)+' h-36 flex items-center justify-center relative'">
+              <div class="absolute inset-0 flex items-center justify-center">
+                <svg class="w-10 h-10 text-white/20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/></svg>
+              </div>
+              <!-- Engagement overlay -->
+              <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 flex items-center gap-3">
+                <span class="flex items-center gap-1 text-xs text-white/80">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"/></svg>
+                  <span x-text="post.likes"></span>
+                </span>
+                <span class="flex items-center gap-1 text-xs text-white/80">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                  <span x-text="post.comments"></span>
+                </span>
+                <span class="flex items-center gap-1 text-xs text-white/80 ml-auto">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.069A1 1 0 0121 8.868V15.13a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                  <span x-text="post.views"></span>
+                </span>
+              </div>
+              <!-- Rank badge -->
+              <div class="absolute top-2 left-2 w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center text-xs font-bold text-white" x-text="i+1"></div>
+              <!-- Reel badge -->
+              <div class="absolute top-2 right-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded font-medium" x-text="post.type"></div>
+            </div>
+            <div class="p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-xs font-bold text-indigo-300" x-text="post.account"></span>
+                <span class="text-xs text-gray-600" x-text="'· '+post.followers+' followers'"></span>
+              </div>
+              <p class="text-xs font-semibold text-white mb-2 line-clamp-2" x-text="'Hook: '+post.hook"></p>
+              <div class="bg-[#090d18] rounded-lg p-2.5 mb-3">
+                <p class="text-xs text-teal-400 font-semibold mb-1">Why it works</p>
+                <p class="text-xs text-gray-400 line-clamp-3" x-text="post.insight"></p>
+              </div>
+              <button class="w-full text-xs bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 py-1.5 rounded-lg font-semibold transition-colors">Use this angle →</button>
+            </div>
+          </div>
+        </template>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <template x-for="(post, i) in igPosts.slice(3,5)" :key="post.id">
+          <div class="card scrape-card p-0 overflow-hidden">
+            <div :class="'thumb-'+(i+4)+' h-36 flex items-center justify-center relative'">
+              <div class="absolute inset-0 flex items-center justify-center">
+                <svg class="w-10 h-10 text-white/20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/></svg>
+              </div>
+              <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 flex items-center gap-3">
+                <span class="flex items-center gap-1 text-xs text-white/80"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"/></svg><span x-text="post.likes"></span></span>
+                <span class="flex items-center gap-1 text-xs text-white/80"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg><span x-text="post.comments"></span></span>
+                <span class="flex items-center gap-1 text-xs text-white/80 ml-auto"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.069A1 1 0 0121 8.868V15.13a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 002 2z"/></svg><span x-text="post.views"></span></span>
+              </div>
+              <div class="absolute top-2 left-2 w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center text-xs font-bold text-white" x-text="i+4"></div>
+              <div class="absolute top-2 right-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded font-medium" x-text="post.type"></div>
+            </div>
+            <div class="p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-xs font-bold text-indigo-300" x-text="post.account"></span>
+                <span class="text-xs text-gray-600" x-text="'· '+post.followers+' followers'"></span>
+              </div>
+              <p class="text-xs font-semibold text-white mb-2 line-clamp-2" x-text="'Hook: '+post.hook"></p>
+              <div class="bg-[#090d18] rounded-lg p-2.5 mb-3">
+                <p class="text-xs text-teal-400 font-semibold mb-1">Why it works</p>
+                <p class="text-xs text-gray-400 line-clamp-3" x-text="post.insight"></p>
+              </div>
+              <button class="w-full text-xs bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 py-1.5 rounded-lg font-semibold transition-colors">Use this angle →</button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════
+         TAB 3 — FACEBOOK IDEATION
+    ════════════════════════════════ -->
+    <div x-show="activeTab==='facebook'" x-cloak>
+
+      <div class="apify-badge rounded-xl p-3.5 mb-5 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-teal-950/60">
+          <svg class="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-bold text-teal-200">Apify Facebook Scraper</p>
+          <p class="text-xs text-gray-400">Top 5 most-interacted posts from detailing Facebook Pages — scraped by <span class="text-teal-300 font-medium">apify/facebook-posts-scraper</span>. Sorted by reactions + comments + shares.</p>
+        </div>
+        <div class="text-right flex-shrink-0">
+          <p class="text-xs font-semibold text-teal-300">Last scraped: 2h ago</p>
+          <p class="text-xs text-gray-500">Pages: detailing, ceramic, PPF</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 mb-5">
+        <p class="text-xs text-gray-500">Monitoring pages:</p>
+        <template x-for="pg in fbPages" :key="pg">
+          <span class="text-xs bg-[#0d1220] border border-[#1a2338] text-gray-300 px-2 py-0.5 rounded-full" x-text="pg"></span>
+        </template>
+        <button class="ml-auto text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Add page
+        </button>
+      </div>
+
+      <div class="grid grid-cols-3 gap-4 mb-4">
+        <template x-for="(post, i) in fbPosts.slice(0,3)" :key="post.id">
+          <div class="card scrape-card p-0 overflow-hidden">
+            <div :class="'thumb-fb'+(i+1)+' h-36 flex items-center justify-center relative'">
+              <div class="absolute inset-0 flex items-center justify-center">
+                <svg class="w-10 h-10 text-white/20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/></svg>
+              </div>
+              <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 flex items-center gap-3">
+                <span class="flex items-center gap-1 text-xs text-white/80">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z"/></svg>
+                  <span x-text="post.reactions"></span>
+                </span>
+                <span class="flex items-center gap-1 text-xs text-white/80">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                  <span x-text="post.comments"></span>
+                </span>
+                <span class="flex items-center gap-1 text-xs text-white/80">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                  <span x-text="post.shares"></span>
+                </span>
+              </div>
+              <div class="absolute top-2 left-2 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-xs font-bold text-white" x-text="i+1"></div>
+              <div class="absolute top-2 right-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded font-medium" x-text="post.type"></div>
+            </div>
+            <div class="p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-xs font-bold text-blue-300" x-text="post.page"></span>
+                <span class="text-xs text-gray-600" x-text="'· '+post.pageFollowers"></span>
+              </div>
+              <p class="text-xs font-semibold text-white mb-2 line-clamp-2" x-text="'Hook: '+post.hook"></p>
+              <div class="bg-[#090d18] rounded-lg p-2.5 mb-3">
+                <p class="text-xs text-teal-400 font-semibold mb-1">Why it works</p>
+                <p class="text-xs text-gray-400 line-clamp-3" x-text="post.insight"></p>
+              </div>
+              <button class="w-full text-xs bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 py-1.5 rounded-lg font-semibold transition-colors">Use this angle →</button>
+            </div>
+          </div>
+        </template>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <template x-for="(post, i) in fbPosts.slice(3,5)" :key="post.id">
+          <div class="card scrape-card p-0 overflow-hidden">
+            <div :class="'thumb-fb'+(i+4)+' h-36 flex items-center justify-center relative'">
+              <div class="absolute inset-0 flex items-center justify-center">
+                <svg class="w-10 h-10 text-white/20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/></svg>
+              </div>
+              <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 flex items-center gap-3">
+                <span class="flex items-center gap-1 text-xs text-white/80"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z"/></svg><span x-text="post.reactions"></span></span>
+                <span class="flex items-center gap-1 text-xs text-white/80"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg><span x-text="post.comments"></span></span>
+                <span class="flex items-center gap-1 text-xs text-white/80"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg><span x-text="post.shares"></span></span>
+              </div>
+              <div class="absolute top-2 left-2 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-xs font-bold text-white" x-text="i+4"></div>
+              <div class="absolute top-2 right-2 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded font-medium" x-text="post.type"></div>
+            </div>
+            <div class="p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-xs font-bold text-blue-300" x-text="post.page"></span>
+                <span class="text-xs text-gray-600" x-text="'· '+post.pageFollowers"></span>
+              </div>
+              <p class="text-xs font-semibold text-white mb-2 line-clamp-2" x-text="'Hook: '+post.hook"></p>
+              <div class="bg-[#090d18] rounded-lg p-2.5 mb-3">
+                <p class="text-xs text-teal-400 font-semibold mb-1">Why it works</p>
+                <p class="text-xs text-gray-400 line-clamp-3" x-text="post.insight"></p>
+              </div>
+              <button class="w-full text-xs bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 py-1.5 rounded-lg font-semibold transition-colors">Use this angle →</button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+  </div><!-- end content -->
+</main>
+
+<script>
+function clientDash() {
+  return {
+    activeTab: 'ads',
+    scraping: false,
+    showGhlMap: false,
+    _charts: {},
+
+    client: { name:"Mike's Auto Spa", city:'Phoenix, AZ', niche:'Auto Detailing & Ceramic Coating' },
+
+    // ── GHL DATA ──
+    ghlStats: [
+      { label:'New Leads (30d)',       value:'84',      color:'text-white',   sub:'from Meta Ads' },
+      { label:'Appointments Booked',   value:'31',      color:'text-green-400', sub:'via GHL Calendar' },
+      { label:'Quotes Sent',           value:'47',      color:'text-blue-400',  sub:'via GHL pipeline' },
+      { label:'Closed Revenue',        value:'$18,240', color:'text-green-400', sub:'won deals this month' },
+      { label:'Open Pipeline Value',   value:'$34,100', color:'text-amber-400', sub:'active opportunities' },
+    ],
+
+    totalPipelineValue: '$52,340',
+
+    pipeline: [
+      { name:'New',       count:18, value:'$8,100',  cls:'stage-new',       textColor:'text-gray-300', leads:['James R. — Ceramic','Maria T. — Full Detail','Dan K. — Window Tint'] },
+      { name:'Contacted', count:14, value:'$9,800',  cls:'stage-contacted', textColor:'text-blue-300', leads:['Alex W. — PPF Front','Sandra M. — Ceramic','Rob F. — Detail + Tint'] },
+      { name:'Quoted',    count:12, value:'$11,400', cls:'stage-quoted',    textColor:'text-amber-300', leads:['Chris B. — 9H Ceramic $1,200','Tanya L. — PPF $2,800','Mike D. — Detail'] },
+      { name:'Booked',    count:9,  value:'$9,700',  cls:'stage-booked',    textColor:'text-indigo-300', leads:['Sarah K. — Sat 9am','Tom R. — Mon 11am','Ashley V. — Fri 2pm'] },
+      { name:'Won',       count:4,  value:'$13,340', cls:'stage-won',       textColor:'text-green-300', leads:['David M. — $3,200','Kim P. — $2,800','Leo G. — $4,100'] },
+    ],
+
+    recentLeads: [
+      { id:1, name:'James Robertson',  service:'Ceramic Coating',  source:'Meta Ad',  stage:'New',     value:'$1,400', time:'12 min ago' },
+      { id:2, name:'Maria Thornton',   service:'Full Detail',      source:'Meta Ad',  stage:'Booked',  value:'$320',   time:'1h ago'     },
+      { id:3, name:'Alex Westbrook',   service:'PPF Full Front',   source:'Meta Ad',  stage:'Quoted',  value:'$2,100', time:'2h ago'     },
+      { id:4, name:'Sandra Marsh',     service:'Graphene Ceramic', source:'Meta Ad',  stage:'Booked',  value:'$1,800', time:'3h ago'     },
+      { id:5, name:'Chris Baxter',     service:'9H Ceramic',       source:'Meta Ad',  stage:'Quoted',  value:'$1,200', time:'4h ago'     },
+    ],
+
+    ghlFieldMap: [
+      { ghl:'Contact (created)',        dashboard:'New Lead card',           note:'Fires when Meta lead form submits' },
+      { ghl:'Opportunity Stage',        dashboard:'Pipeline column',          note:'Maps to New / Quoted / Booked / Won' },
+      { ghl:'Opportunity Value',        dashboard:'Pipeline value & revenue', note:'Set from service price on creation' },
+      { ghl:'Calendar Appointment',     dashboard:'Appointments Booked stat', note:'Confirmed bookings only' },
+      { ghl:'Won Opportunity',          dashboard:'Closed Revenue',           note:'Triggers when stage = Won' },
+      { ghl:'Custom Field: Ad Source',  dashboard:'Lead source label',        note:'Passed via UTM from Meta' },
+      { ghl:'Custom Field: Service',    dashboard:'Service type on lead card', note:'From form dropdown field' },
+      { ghl:'Contact Tag',              dashboard:'Stage badge color',        note:'Tags = new / contacted / quoted' },
+      { ghl:'SMS Conversation',         dashboard:'Last contacted time',      note:'Most recent outbound SMS' },
+    ],
+
+    // ── META ADS DATA ──
+    metaStats: [
+      { label:'Spend MTD',     value:'$2,180', trend: 5.3 },
+      { label:'Reach',         value:'48.2K',  trend:12.1 },
+      { label:'Leads',         value:'84',     trend:22.4 },
+      { label:'CPL',           value:'$25.95', trend:-8.2 },
+      { label:'ROAS',          value:'5.2x',   trend:11.7 },
+    ],
+
+    campaigns: [
+      { id:1, name:'Full Detail — Phoenix Leads',  objective:'Lead Form',   status:'Active',   spend:'$1,420', impressions:'62K', ctr:'2.8', leads:52, cpl:'$27.31', roas:'5.4' },
+      { id:2, name:'Interior Ceramic — Upsell',    objective:'Message/DM',  status:'Active',   spend:'$760',   impressions:'28K', ctr:'3.1', leads:32, cpl:'$23.75', roas:'4.9' },
+    ],
+
+    // ── APIFY — INSTAGRAM ──
+    igAccounts: ['@detailingworld','@obsessed.garage','@ammo_nyc','@torqed','@the_rag_company'],
+
+    igPosts: [
+      { id:1, account:'@detailingworld',    followers:'924K', type:'Reel',  views:'2.4M', likes:'84.2K', comments:'3.1K', hook:"This car sat in a garage for 10 years. Watch what happens next.", insight:"Mystery + before/after is the highest-engagement combo in detailing content. The '10 years' anchor creates emotional investment before the reveal. Copy this with your worst neglected-car job." },
+      { id:2, account:'@obsessed.garage',   followers:'412K', type:'Reel',  views:'1.8M', likes:'62.7K', comments:'2.4K', hook:"POV: Your neighbor sees you doing this at 6am", insight:"POV format + relatable humor drives massive saves and shares without needing a big following. Shoot your next early morning wash session from a third-person angle." },
+      { id:3, account:'@ammo_nyc',          followers:'298K', type:'Video', views:'1.1M', likes:'38.4K', comments:'1.8K', hook:"Is this the most satisfying car wash you've ever seen?", insight:"ASMR + process satisfaction — no voiceover needed. The rhetorical question in the caption forces people to comment yes/no, which spikes the algorithm. Record your foam cannon sequence." },
+      { id:4, account:'@torqed',            followers:'187K', type:'Reel',  views:'890K', likes:'29.1K', comments:'1.2K', hook:"We charged $3,200 for this ceramic coat. Here's why.", insight:"Price transparency pre-qualifies viewers and builds trust simultaneously. The 'here's why' creates a curiosity gap that keeps watch-time high. Do your next ceramic as a price breakdown video." },
+      { id:5, account:'@the_rag_company',   followers:'341K', type:'Video', views:'742K', likes:'21.8K', comments:'940',  hook:"This is why your car still looks dirty after washing it yourself", insight:"Pain-point hook aimed at DIY car owners who are pre-qualified potential customers. Educational content positions you as the expert and floods the comments with questions — reply to every one with 'DM me'." },
+    ],
+
+    // ── APIFY — FACEBOOK ──
+    fbPages: ['Detailed Image','Mobile Detail Pro','Ceramic Pro Southeast','AutoShine Masters','Pro Detail Nation'],
+
+    fbPosts: [
+      { id:1, page:'Detailed Image',        pageFollowers:'186K followers', type:'Video', reactions:'4.2K', comments:'628', shares:'891', hook:"Before booking us, read this post first.", insight:"Counter-intuitive hook ('don't book us yet') spikes curiosity and shares. People tag others who are shopping for detailing. The comments become free social proof. Recreate with 'Before you book anyone, watch this'." },
+      { id:2, page:'Mobile Detail Pro',     pageFollowers:'94K followers',  type:'Video', reactions:'2.8K', comments:'1.2K', shares:'442', hook:"$99 vs $899 detail — what's actually different?", insight:"Price comparison creates productive controversy. The comment section fills with debate, which Facebook's algorithm rewards with massive organic reach. Do this with your entry package vs your premium ceramic." },
+      { id:3, page:'AutoShine Masters',     pageFollowers:'72K followers',  type:'Video', reactions:'1.9K', comments:'874', shares:'318', hook:"We detailed this fleet of 20 trucks in one weekend (time lapse)", insight:"Volume + speed = impressive credibility. Fleet size signals enterprise capability to any business owner watching. Time-lapse is inherently watchable. If you do any fleet work, film it — it's your highest-ROI content." },
+      { id:4, page:'Ceramic Pro Southeast', pageFollowers:'63K followers',  type:'Video', reactions:'1.6K', comments:'734', shares:'291', hook:"Here's what ceramic coating looks like after 2 years in Florida heat", insight:"Time-proof content is the most trusted sales argument for ceramic. Geographic specificity ('Florida heat') makes it hyper-relevant to local buyers. Do a 12-month or 2-year follow-up with a past ceramic customer." },
+      { id:5, page:'Pro Detail Nation',     pageFollowers:'48K followers',  type:'Video', reactions:'1.3K', comments:'612', shares:'267', hook:"Customer said: 'I went to 3 other detailers — this is the only one that got it right'", insight:"Comparative testimonials are 3x more persuasive than standalone praise because they include an implicit competitor failure. The '3 detailers' framing makes your result feel exceptional. Ask your next happy customer to say this on camera." },
+    ],
+
+    initAdsChart() {
+      const ctx = document.getElementById('adsChart');
+      if (!ctx) return;
+      if (this._charts.ads) this._charts.ads.destroy();
+      const labels = Array.from({length:30},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(29-i));return d.toLocaleDateString('en',{month:'short',day:'numeric'});});
+      this._charts.ads = new Chart(ctx,{
+        type:'line',
+        data:{labels,datasets:[
+          {label:'Meta Leads',data:[2,3,2,4,3,5,4,5,3,6,4,7,5,6,4,7,5,8,6,7,5,8,6,9,7,8,6,9,7,10],borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,0.06)',tension:0.4,fill:true,pointRadius:0,borderWidth:2},
+          {label:'GHL Appointments',data:[1,1,1,2,1,2,2,2,1,3,2,3,2,3,2,3,2,4,3,3,2,4,3,4,3,4,3,4,3,5],borderColor:'#fb923c',backgroundColor:'rgba(251,146,60,0.06)',tension:0.4,fill:true,pointRadius:0,borderWidth:2},
+        ]},
+        options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a2338',titleColor:'#e2e8f0',bodyColor:'#9ca3af',borderColor:'#374151',borderWidth:1}},scales:{x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#6b7280',maxTicksLimit:8,font:{size:10}}},y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#6b7280',font:{size:10}},suggestedMin:0}}}
+      });
+    },
+
+    init() {
+      this.$nextTick(() => this.initAdsChart());
+    }
+  };
+}
+</script>
+</body>
+</html>

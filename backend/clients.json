@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "account_id": "act_REPLACE_WITH_ACCOUNT_ID",
+    "name": "Client Name Here",
+    "city": "City, ST",
+    "niche": "Detail",
+    "color": "#3b82f6",
+    "dailyBudget": "$75"
+  }
+]

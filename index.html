@@ -1,0 +1,1661 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sovereign — Agency Command Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' }</script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    body { background-color: #080c14; color: #e2e8f0; font-family: system-ui, -apple-system, sans-serif; }
+    .card  { background: #0f1623; border: 1px solid #1e2a3a; border-radius: 12px; }
+    .card2 { background: #0a0e18; border: 1px solid #1e2a3a; border-radius: 8px; }
+    .sidebar-bg { background: #060a11; border-right: 1px solid #1e2a3a; }
+    [x-cloak] { display: none !important; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 4px; }
+
+    /* Nav */
+    .nav-item { transition: all 0.15s; border-right: 2px solid transparent; }
+    .nav-item:hover { background: rgba(37,99,235,.08); color: #bfdbfe; }
+    .nav-item.active { background: rgba(37,99,235,.15); border-right-color: #2563eb; color: #93c5fd; }
+
+    /* Status badges */
+    .s-active   { background:rgba(16,185,129,.12);  color:#10b981; border:1px solid rgba(16,185,129,.25); }
+    .s-paused   { background:rgba(245,158,11,.12);  color:#f59e0b; border:1px solid rgba(245,158,11,.25); }
+    .s-learning { background:rgba(37,99,235,.12);  color:#60a5fa; border:1px solid rgba(37,99,235,.25); }
+    .s-draft    { background:rgba(107,114,128,.12); color:#9ca3af; border:1px solid rgba(107,114,128,.25); }
+
+    /* Niche badges */
+    .n-ceramic { background:rgba(251,191,36,.1); color:#fbbf24; border:1px solid rgba(251,191,36,.25); }
+    .n-tint    { background:rgba(37,99,235,.1);  color:#60a5fa; border:1px solid rgba(37,99,235,.25); }
+    .n-ppf     { background:rgba(236,72,153,.1);  color:#f472b6; border:1px solid rgba(236,72,153,.25); }
+    .n-detail  { background:rgba(16,185,129,.1);  color:#34d399; border:1px solid rgba(16,185,129,.25); }
+    .n-wrap    { background:rgba(239,68,68,.1);   color:#f87171; border:1px solid rgba(239,68,68,.25); }
+    .n-mobile  { background:rgba(14,165,233,.1);  color:#38bdf8; border:1px solid rgba(14,165,233,.25); }
+
+    /* Table */
+    .tbl-row { border-bottom: 1px solid #151d2b; transition: background 0.1s; }
+    .tbl-row:hover { background: rgba(37,99,235,.04); }
+    .tbl-row.expanded { background: rgba(37,99,235,.06); }
+
+    /* Funnel */
+    .funnel-step { position: relative; }
+    .funnel-step::after { content:''; position:absolute; bottom:-18px; left:50%; transform:translateX(-50%); width:1px; height:18px; background:rgba(37,99,235,.3); }
+    .funnel-step:last-child::after { display:none; }
+
+    /* Chart tab active */
+    .chart-tab-active { background: rgba(37,99,235,.2); color: #93c5fd; border-color: rgba(37,99,235,.4); }
+
+    .metric-up   { color: #10b981; }
+    .metric-down { color: #ef4444; }
+    .metric-warn { color: #f59e0b; }
+    tr:hover td { background: rgba(255,255,255,.015); }
+    .line-clamp-1 { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  </style>
+</head>
+<body x-data="agency()" class="flex h-screen overflow-hidden">
+
+<!-- ═══════ SIDEBAR ═══════ -->
+<aside class="sidebar-bg w-56 flex-shrink-0 flex flex-col overflow-y-auto">
+
+  <div class="p-4 border-b border-[#1e2a3a]">
+    <div class="flex items-center gap-2.5 mb-3">
+      <div class="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+        <svg class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11 4a1 1 0 10-2 0v4a1 1 0 102 0V7zm-3 1a1 1 0 10-2 0v3a1 1 0 102 0V8zM8 9a1 1 0 00-2 0v2a1 1 0 102 0V9z" clip-rule="evenodd"/></svg>
+      </div>
+      <span class="font-bold text-white text-sm">Sovereign</span>
+    </div>
+    <div class="flex items-center gap-2 bg-red-950/30 border border-red-800/30 rounded-lg px-2.5 py-1.5">
+      <svg class="w-3 h-3 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+      <span class="text-xs font-semibold text-red-400 uppercase tracking-wide">Team Only</span>
+    </div>
+  </div>
+
+  <nav class="flex-1 p-2.5 space-y-0.5">
+    <p class="text-xs font-semibold text-gray-600 uppercase tracking-wider px-3 pt-3 pb-1.5">Dashboard</p>
+    <button @click="activeTab='tasks'" :class="['nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-l-lg text-sm font-medium text-left', activeTab==='tasks'?'active':'text-gray-400']">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+      Team Tasks
+    </button>
+    <button @click="activeTab='clients'" :class="['nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-l-lg text-sm font-medium text-left', activeTab==='clients'?'active':'text-gray-400']">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Client Ad Performance
+    </button>
+    <button @click="activeTab='adstats'; $nextTick(()=>initAdStatsCharts())" :class="['nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-l-lg text-sm font-medium text-left', activeTab==='adstats'?'active':'text-gray-400']">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      Ad Statistics
+    </button>
+    <button @click="activeTab='competitors'" :class="['nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-l-lg text-sm font-medium text-left', activeTab==='competitors'?'active':'text-gray-400']">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+      Competitor Intel
+    </button>
+
+    <div class="pt-3">
+      <p class="text-xs font-semibold text-gray-600 uppercase tracking-wider px-3 pb-1.5">Clients</p>
+      <template x-for="c in clients" :key="c.id">
+        <a :href="'client.html?id='+c.id" class="nav-item flex items-center gap-2.5 px-3 py-1.5 rounded-l-lg text-xs text-gray-400 hover:text-gray-200 group">
+          <span :style="'background:'+c.color" class="w-5 h-5 rounded flex items-center justify-center text-white font-bold text-xs flex-shrink-0" x-text="c.name.charAt(0)"></span>
+          <span class="truncate flex-1" x-text="c.name"></span>
+          <span :class="c.adStatus==='Active'?'bg-green-500':'c.adStatus===\'Learning\'?\'bg-blue-400\':\'bg-amber-400\''" class="w-1.5 h-1.5 rounded-full flex-shrink-0" :style="c.adStatus==='Active'?'background:#10b981':c.adStatus==='Learning'?'background:#60a5fa':'background:#f59e0b'"></span>
+        </a>
+      </template>
+    </div>
+  </nav>
+
+  <div class="p-3 border-t border-[#1e2a3a]">
+    <div class="flex items-center gap-2.5 px-2 py-1.5">
+      <div class="w-6 h-6 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center text-xs font-bold text-white">A</div>
+      <div><p class="text-xs font-medium text-white">Sovereign</p><p class="text-xs text-gray-600">admin access</p></div>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════ MAIN ═══════ -->
+<main class="flex-1 flex flex-col overflow-hidden">
+
+  <!-- Topbar -->
+  <header class="border-b border-[#1e2a3a] px-6 py-3 flex items-center gap-4" style="background:#080c14">
+    <div class="flex-1">
+      <h1 class="text-base font-bold text-white" x-text="activeTab==='tasks'?'Team Tasks':activeTab==='clients'?'Client Ad Performance — Auto Restyling Portfolio':activeTab==='adstats'?'Ad Statistics — Portfolio Deep Dive':activeTab==='competitors'?'Competitor Intelligence — Ad Library':''"></h1>
+      <p class="text-xs text-gray-500">Auto Detailing & Restyling Niche · <span x-text="new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})"></span></p>
+    </div>
+    <div class="flex items-center gap-2">
+      <!-- Live / Mock badge -->
+      <div x-show="liveMode" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-950/50 border border-green-800/40">
+        <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+        <span class="text-xs text-green-400 font-semibold">Live</span>
+        <span x-show="lastUpdated" class="text-xs text-gray-600" x-text="fmtLastUpdated()"></span>
+      </div>
+      <div x-show="!liveMode && !loading" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-950/50 border border-amber-800/40">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+        <span class="text-xs text-amber-400 font-semibold">Mock data</span>
+      </div>
+      <div x-show="loading" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-950/50 border border-blue-800/40">
+        <svg class="w-3 h-3 text-blue-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+        <span class="text-xs text-blue-400 font-semibold">Fetching…</span>
+      </div>
+
+      <!-- Time-frame tabs -->
+      <div class="flex items-center gap-1 bg-[#0a0e18] border border-[#1e2a3a] rounded-lg p-0.5">
+        <template x-for="tf in timeFrames" :key="tf.id">
+          <button @click="setTimeFrame(tf.id)" :class="['px-2.5 py-1 rounded-md text-xs font-semibold transition-all', dateRange===tf.id ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-200']" x-text="tf.label"></button>
+        </template>
+      </div>
+      <!-- Auto-refresh pill -->
+      <div class="flex items-center gap-1 px-2 py-1 rounded-full bg-[#0a0e18] border border-[#1e2a3a]">
+        <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+        <span class="text-xs text-gray-500" x-text="refreshLabel()"></span>
+      </div>
+      <button class="relative p-2 text-gray-500 hover:text-white rounded-lg hover:bg-white/5">
+        <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        <span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+      </button>
+      <!-- Refresh button -->
+      <button @click="refreshData()" :disabled="loading" class="p-2 text-gray-500 hover:text-white rounded-lg hover:bg-white/5 disabled:opacity-40">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18" :class="loading?'animate-spin':''"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="flex-1 overflow-y-auto p-5">
+
+    <!-- ════════════════════════════════════
+         TAB 0 — TEAM TASKS (NOTEBOOK)
+    ════════════════════════════════════ -->
+    <div x-show="activeTab==='tasks'" x-cloak>
+
+      <!-- Date navigator -->
+      <div class="card px-4 py-3 mb-5 flex items-center justify-between gap-4 flex-wrap">
+
+        <!-- 7-day strip -->
+        <div class="flex items-center gap-1">
+          <template x-for="day in recentDays" :key="day.date">
+            <button @click="taskDate = day.date"
+              class="flex flex-col items-center px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
+              :class="taskDate === day.date ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'">
+              <span x-text="day.dow" class="text-[10px] uppercase tracking-wide leading-none mb-0.5"></span>
+              <span x-text="day.d" class="font-bold text-sm leading-none"></span>
+              <span class="w-1 h-1 rounded-full mt-1" :class="day.hasEntries ? 'bg-green-400' : 'bg-transparent'"></span>
+            </button>
+          </template>
+        </div>
+
+        <!-- Prev / label / Next / Today -->
+        <div class="flex items-center gap-2 ml-auto">
+          <button @click="prevDay()" class="p-1.5 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <span class="text-sm font-semibold text-white whitespace-nowrap" x-text="taskDateLabel"></span>
+          <button @click="nextDay()" :disabled="isToday" class="p-1.5 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors disabled:opacity-25">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+          <button x-show="!isToday" @click="goToToday()"
+            class="px-2.5 py-1 text-xs font-semibold text-blue-400 hover:text-blue-300 border border-blue-900/50 hover:border-blue-700 rounded-lg transition-colors">
+            Today
+          </button>
+          <!-- Past-day indicator -->
+          <span x-show="!isToday" class="px-2 py-0.5 text-xs text-amber-400 bg-amber-950/40 border border-amber-800/30 rounded-full">Viewing past</span>
+        </div>
+      </div>
+
+      <!-- Two notebook panels -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+        <!-- Johann -->
+        <div class="card flex flex-col" style="min-height:420px">
+          <div class="flex items-center gap-3 px-5 py-4 border-b border-[#1e2a3a]">
+            <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">J</div>
+            <div>
+              <p class="text-sm font-bold text-white">Johann</p>
+              <p class="text-xs text-gray-500"
+                x-text="(todosByDate.johann[taskDate]||[]).filter(t=>!t.done).length + ' remaining · ' + (todosByDate.johann[taskDate]||[]).filter(t=>t.done).length + ' done'">
+              </p>
+            </div>
+            <button x-show="(todosByDate.johann[taskDate]||[]).some(t=>t.done)"
+              @click="clearDone('johann')"
+              class="ml-auto text-xs text-gray-600 hover:text-red-400 transition-colors">Clear done</button>
+          </div>
+
+          <div class="px-4 py-3 border-b border-[#1e2a3a]">
+            <div class="flex gap-2">
+              <input x-model="newTodo.johann" @keydown.enter="addTodo('johann')"
+                placeholder="Add a task for this day…"
+                class="flex-1 bg-[#080c14] border border-[#1e2a3a] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-600 transition-colors">
+              <button @click="addTodo('johann')" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex-1 overflow-y-auto divide-y divide-[#1e2a3a]">
+            <template x-if="!(todosByDate.johann[taskDate]||[]).length">
+              <div class="flex flex-col items-center justify-center py-14 text-gray-600">
+                <svg class="w-8 h-8 mb-2 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                <p class="text-sm" x-text="isToday ? 'Nothing yet — add a task above' : 'No tasks logged this day'"></p>
+              </div>
+            </template>
+            <template x-for="todo in (todosByDate.johann[taskDate]||[])" :key="todo.id">
+              <div class="flex items-start gap-3 px-4 py-3 group hover:bg-white/[0.02] transition-colors">
+                <button @click="toggleTodo('johann', todo.id)"
+                  class="mt-0.5 flex-shrink-0 rounded border transition-colors"
+                  :class="todo.done ? 'bg-blue-600 border-blue-600' : 'border-gray-600 hover:border-blue-500'"
+                  style="width:18px;height:18px;min-width:18px;">
+                  <svg x-show="todo.done" class="w-full h-full text-white p-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                </button>
+                <span class="flex-1 text-sm leading-relaxed break-words"
+                  :class="todo.done ? 'line-through text-gray-600' : 'text-gray-200'"
+                  x-text="todo.text"></span>
+                <button @click="deleteTodo('johann', todo.id)"
+                  class="flex-shrink-0 opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition-all ml-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Santiago -->
+        <div class="card flex flex-col" style="min-height:420px">
+          <div class="flex items-center gap-3 px-5 py-4 border-b border-[#1e2a3a]">
+            <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">S</div>
+            <div>
+              <p class="text-sm font-bold text-white">Santiago</p>
+              <p class="text-xs text-gray-500"
+                x-text="(todosByDate.santiago[taskDate]||[]).filter(t=>!t.done).length + ' remaining · ' + (todosByDate.santiago[taskDate]||[]).filter(t=>t.done).length + ' done'">
+              </p>
+            </div>
+            <button x-show="(todosByDate.santiago[taskDate]||[]).some(t=>t.done)"
+              @click="clearDone('santiago')"
+              class="ml-auto text-xs text-gray-600 hover:text-red-400 transition-colors">Clear done</button>
+          </div>
+
+          <div class="px-4 py-3 border-b border-[#1e2a3a]">
+            <div class="flex gap-2">
+              <input x-model="newTodo.santiago" @keydown.enter="addTodo('santiago')"
+                placeholder="Add a task for this day…"
+                class="flex-1 bg-[#080c14] border border-[#1e2a3a] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-600 transition-colors">
+              <button @click="addTodo('santiago')" class="px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex-1 overflow-y-auto divide-y divide-[#1e2a3a]">
+            <template x-if="!(todosByDate.santiago[taskDate]||[]).length">
+              <div class="flex flex-col items-center justify-center py-14 text-gray-600">
+                <svg class="w-8 h-8 mb-2 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                <p class="text-sm" x-text="isToday ? 'Nothing yet — add a task above' : 'No tasks logged this day'"></p>
+              </div>
+            </template>
+            <template x-for="todo in (todosByDate.santiago[taskDate]||[])" :key="todo.id">
+              <div class="flex items-start gap-3 px-4 py-3 group hover:bg-white/[0.02] transition-colors">
+                <button @click="toggleTodo('santiago', todo.id)"
+                  class="mt-0.5 flex-shrink-0 rounded border transition-colors"
+                  :class="todo.done ? 'bg-purple-600 border-purple-600' : 'border-gray-600 hover:border-purple-500'"
+                  style="width:18px;height:18px;min-width:18px;">
+                  <svg x-show="todo.done" class="w-full h-full text-white p-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                </button>
+                <span class="flex-1 text-sm leading-relaxed break-words"
+                  :class="todo.done ? 'line-through text-gray-600' : 'text-gray-200'"
+                  x-text="todo.text"></span>
+                <button @click="deleteTodo('santiago', todo.id)"
+                  class="flex-shrink-0 opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition-all ml-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+            </template>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- end tasks tab -->
+
+    <!-- ════════════════════════════════════
+         TAB 1 — CLIENT AD PERFORMANCE
+    ════════════════════════════════════ -->
+    <div x-show="activeTab==='clients'" x-cloak>
+
+      <!-- Portfolio KPIs -->
+      <div class="grid grid-cols-5 gap-3 mb-5">
+        <template x-for="k in portfolioKPIs" :key="k.label">
+          <div class="card p-4">
+            <p class="text-xs text-gray-500 mb-2 font-medium" x-text="k.label"></p>
+            <p class="text-xl font-bold text-white mb-0.5" x-text="k.value"></p>
+            <p class="text-xs flex items-center gap-1" :class="k.trend>0?'metric-up':'metric-down'">
+              <span x-text="k.trend>0?'↑':'↓'"></span>
+              <span x-text="Math.abs(k.trend)+'%'"></span>
+              <span class="text-gray-600 ml-0.5">vs prior</span>
+            </p>
+          </div>
+        </template>
+      </div>
+
+      <!-- Filters -->
+      <div class="flex items-center gap-2 mb-4">
+        <template x-for="f in ['All','Active','Paused','Learning']" :key="f">
+          <button @click="statusFilter=f" :class="['px-3 py-1 rounded-full text-xs font-semibold transition-all', statusFilter===f?'bg-blue-600 text-white':'bg-[#0f1623] text-gray-400 border border-[#1e2a3a] hover:border-blue-500']" x-text="f"></button>
+        </template>
+        <div class="h-4 w-px bg-[#1e2a3a] mx-1"></div>
+        <template x-for="n in ['All','Ceramic','Tint','PPF','Detail','Mobile','Wrap']" :key="n">
+          <button @click="nicheFilter=n" :class="['px-3 py-1 rounded-full text-xs font-semibold transition-all', nicheFilter===n?'bg-[#1e2a3a] text-gray-200':'text-gray-600 hover:text-gray-400']" x-text="n"></button>
+        </template>
+        <div class="ml-auto flex items-center gap-2">
+          <input type="text" placeholder="Search clients..." x-model="searchQuery" class="bg-[#0f1623] border border-[#1e2a3a] text-gray-300 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 w-44 placeholder-gray-600">
+          <button class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Add Client
+          </button>
+        </div>
+      </div>
+
+      <!-- Health Status Groups -->
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-xs text-gray-600 font-semibold uppercase tracking-wider mr-1">Health:</span>
+        <template x-for="g in ['All','Needs Action','Watch','Stable']" :key="g">
+          <button @click="healthFilter=g"
+            :class="['px-2.5 py-1 rounded-full text-xs font-semibold transition-all border',
+              healthFilter===g && g==='All'          ? 'bg-blue-600 text-white border-blue-600' :
+              healthFilter===g && g==='Needs Action' ? 'bg-red-950/60 text-red-400 border-red-800/40' :
+              healthFilter===g && g==='Watch'        ? 'bg-amber-950/60 text-amber-400 border-amber-800/40' :
+              healthFilter===g && g==='Stable'       ? 'bg-green-950/60 text-green-400 border-green-800/40' :
+              'text-gray-600 border-[#1e2a3a] bg-[#0f1623] hover:text-gray-400']"
+            x-text="g"></button>
+        </template>
+        <span x-show="clientsNeedingAction.length > 0" class="ml-auto text-xs text-red-400 font-medium"
+          x-text="clientsNeedingAction.length + (clientsNeedingAction.length > 1 ? ' clients' : ' client') + ' need action'"></span>
+      </div>
+
+      <!-- Client Table -->
+      <div class="card overflow-hidden">
+        <table class="w-full text-xs">
+          <thead>
+            <tr class="border-b border-[#1e2a3a] text-gray-500">
+              <th class="text-left px-4 py-3 font-semibold uppercase tracking-wider">Client</th>
+              <th class="text-left px-3 py-3 font-semibold uppercase tracking-wider">Niche</th>
+              <th class="text-left px-3 py-3 font-semibold uppercase tracking-wider">Status</th>
+              <th class="text-right px-3 py-3 font-semibold uppercase tracking-wider">CPL by Service</th>
+              <th class="text-right px-3 py-3 font-semibold uppercase tracking-wider">Spend MTD</th>
+              <th class="text-right px-3 py-3 font-semibold uppercase tracking-wider">Reach</th>
+              <th class="text-right px-3 py-3 font-semibold uppercase tracking-wider">Leads</th>
+              <th class="text-right px-3 py-3 font-semibold uppercase tracking-wider">CPL</th>
+              <th class="text-right px-3 py-3 font-semibold uppercase tracking-wider">Freq.</th>
+              <th class="text-right px-3 py-3 font-semibold uppercase tracking-wider">Health</th>
+              <th class="px-3 py-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="c in filteredClients" :key="c.id">
+              <tr class="tbl-row" :class="expandedClient===c.id?'expanded':''">
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-2.5">
+                    <div :style="'background:'+c.color" class="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0" x-text="c.name.charAt(0)"></div>
+                    <div class="min-w-0">
+                      <p class="font-semibold text-white text-xs" x-text="c.name"></p>
+                      <p class="text-gray-500 text-xs" x-text="c.city"></p>
+                      <template x-if="clientNotes[_noteKey(c)]">
+                        <p class="text-xs text-amber-400/80 truncate max-w-[160px] mt-0.5 italic"
+                          x-text="'✎ ' + clientNotes[_noteKey(c)].text"></p>
+                      </template>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-3 py-3">
+                  <span :class="'n-'+c.niche.toLowerCase()" class="text-xs px-2 py-0.5 rounded-full font-semibold" x-text="c.niche"></span>
+                </td>
+                <td class="px-3 py-3">
+                  <div class="flex items-center gap-1.5">
+                    <span :class="c.adStatus==='Active'?'bg-green-400':c.adStatus==='Learning'?'bg-blue-400':'bg-amber-400'" class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>
+                    <span :class="'s-'+c.adStatus.toLowerCase()" class="text-xs px-2 py-0.5 rounded-full font-semibold" x-text="c.adStatus"></span>
+                  </div>
+                </td>
+                <td class="px-3 py-3 text-right">
+                  <template x-if="clientServiceCPL(c).detailing">
+                    <div class="flex items-center justify-end gap-1.5 leading-tight">
+                      <span class="text-gray-500 text-xs">Detail</span>
+                      <span class="font-semibold" :class="parseFloat(clientServiceCPL(c).detailing.replace('$',''))<30?'metric-up':parseFloat(clientServiceCPL(c).detailing.replace('$',''))<50?'metric-warn':'metric-down'" x-text="clientServiceCPL(c).detailing"></span>
+                    </div>
+                  </template>
+                  <template x-if="clientServiceCPL(c).ceramic">
+                    <div class="flex items-center justify-end gap-1.5 leading-tight mt-0.5">
+                      <span class="text-gray-500 text-xs">Ceramic</span>
+                      <span class="font-semibold" :class="parseFloat(clientServiceCPL(c).ceramic.replace('$',''))<30?'metric-up':parseFloat(clientServiceCPL(c).ceramic.replace('$',''))<50?'metric-warn':'metric-down'" x-text="clientServiceCPL(c).ceramic"></span>
+                    </div>
+                  </template>
+                  <template x-if="clientServiceCPL(c).overall">
+                    <div class="flex flex-col gap-0.5">
+                      <span class="text-xs text-gray-500">Overall</span>
+                      <span class="font-semibold" :class="parseFloat(clientServiceCPL(c).overall.replace('$',''))<30?'metric-up':parseFloat(clientServiceCPL(c).overall.replace('$',''))<50?'metric-warn':'metric-down'" x-text="clientServiceCPL(c).overall"></span>
+                    </div>
+                  </template>
+                  <template x-if="!clientServiceCPL(c).detailing && !clientServiceCPL(c).ceramic && !clientServiceCPL(c).overall">
+                    <span class="text-gray-600">—</span>
+                  </template>
+                </td>
+                <td class="px-3 py-3 text-right">
+                  <span class="text-gray-300 font-medium" x-text="c.spendMTD"></span>
+                  <p x-show="c.prev" class="text-xs mt-0.5 text-gray-600" x-text="c.prev ? fmtChg(parseFloat(c.spendMTD.replace(/[$,]/g,'')), c.prev.spend) : ''"></p>
+                </td>
+                <td class="px-3 py-3 text-right text-gray-300" x-text="c.reach"></td>
+                <td class="px-3 py-3 text-right">
+                  <span class="font-semibold text-white" x-text="c.leads"></span>
+                  <p x-show="c.prev" class="text-xs mt-0.5" :class="c.prev && c.leads >= c.prev.leads ? 'metric-up' : 'metric-down'" x-text="c.prev ? fmtChg(c.leads, c.prev.leads) : ''"></p>
+                </td>
+                <td class="px-3 py-3 text-right">
+                  <span :class="parseFloat(c.cpl.replace('$',''))<30?'metric-up':parseFloat(c.cpl.replace('$',''))<50?'metric-warn':'metric-down'" class="font-semibold" x-text="c.cpl"></span>
+                  <p x-show="c.prev" class="text-xs mt-0.5" :class="c.prev && parseFloat(c.cpl.replace('$','')) <= c.prev.cpl ? 'metric-up' : 'metric-down'" x-text="c.prev ? fmtChg(parseFloat(c.cpl.replace('$','')), c.prev.cpl) : ''"></p>
+                </td>
+                <td class="px-3 py-3 text-right">
+                  <span :class="parseFloat(c.freq)<2.5?'metric-up':parseFloat(c.freq)<3.5?'metric-warn':'metric-down'" class="font-semibold" x-text="c.freq"></span>
+                </td>
+                <td class="px-3 py-3 text-right">
+                  <div class="flex flex-col items-end gap-1">
+                    <span class="font-bold text-sm tabular-nums leading-none"
+                      :class="clientHealth(c)>=78?'metric-up':clientHealth(c)>=55?'metric-warn':'metric-down'"
+                      x-text="clientHealth(c)"></span>
+                    <div class="flex items-center gap-0.5" x-show="clientAlerts(c).length > 0">
+                      <template x-for="a in clientAlerts(c).slice(0,4)" :key="a.type+a.msg">
+                        <span class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          :class="a.sev==='critical'?'bg-red-500':'bg-amber-500'"></span>
+                      </template>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-3 py-3 text-right">
+                  <div class="flex items-center justify-end gap-1">
+                    <button @click="openNote(c)"
+                      :class="clientNotes[_noteKey(c)] ? 'text-amber-400 bg-amber-950/40' : 'text-gray-500 hover:text-amber-400 hover:bg-amber-950/40'"
+                      class="p-1.5 rounded-lg transition-colors" title="Add / edit note">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    </button>
+                    <button @click="expandedClient===c.id ? expandedClient=null : (expandedClient=c.id, loadClientCampaigns(c))" class="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-950/50 rounded-lg" title="Expand campaigns">
+                      <svg class="w-3.5 h-3.5 transition-transform" :class="expandedClient===c.id?'rotate-180':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <a :href="'client.html?id='+c.id" class="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-950/50 rounded-lg" title="Open client dashboard">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              <!-- Note row -->
+              <tr x-show="noteOpen === _noteKey(c)" x-cloak>
+                <td colspan="12" class="px-4 py-0">
+                  <div class="border border-amber-800/40 rounded-xl p-4 mb-2 bg-amber-950/10">
+                    <div class="flex items-center justify-between mb-2">
+                      <p class="text-xs font-semibold text-amber-300 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        Last action — <span x-text="c.name"></span>
+                      </p>
+                      <span x-show="clientNotes[_noteKey(c)]?.updatedAt"
+                        class="text-xs text-gray-600"
+                        x-text="fmtNoteDate(clientNotes[_noteKey(c)]?.updatedAt)">
+                      </span>
+                    </div>
+                    <textarea x-model="noteDraft" rows="3"
+                      placeholder="What was last done? e.g. Raised daily budget to $80, swapped creative, narrowed audience to 25-45…"
+                      class="w-full bg-[#080c14] border border-[#1e2a3a] focus:border-amber-700 rounded-lg px-3 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none resize-none transition-colors">
+                    </textarea>
+                    <div class="flex items-center justify-between mt-2">
+                      <button @click="noteOpen=null" class="text-xs text-gray-600 hover:text-gray-400 transition-colors">Cancel</button>
+                      <div class="flex items-center gap-2">
+                        <button x-show="clientNotes[_noteKey(c)]" @click="noteDraft=''; saveNote(c)"
+                          class="text-xs text-red-500/70 hover:text-red-400 transition-colors">Clear note</button>
+                        <button @click="saveNote(c)"
+                          class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-lg transition-colors">
+                          Save Note
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Expanded campaign rows -->
+              <tr x-show="expandedClient===c.id" x-cloak>
+                <td colspan="12" class="bg-[#080c14] px-4 py-3">
+                  <div class="border border-blue-900/40 rounded-xl overflow-hidden">
+                    <div class="px-4 py-2.5 border-b border-blue-900/30 flex items-center gap-2 bg-blue-950/20">
+                      <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/></svg>
+                      <p class="text-xs font-semibold text-blue-300" x-text="'Active Campaigns — '+c.name"></p>
+                    </div>
+                    <table class="w-full text-xs">
+                      <thead><tr class="text-gray-500 border-b border-[#1e2a3a]">
+                        <th class="text-left px-4 py-2 font-medium">Campaign</th>
+                        <th class="text-left px-3 py-2 font-medium">Objective</th>
+                        <th class="text-right px-3 py-2 font-medium">Spend</th>
+                        <th class="text-right px-3 py-2 font-medium">Impressions</th>
+                        <th class="text-right px-3 py-2 font-medium">CTR</th>
+                        <th class="text-right px-3 py-2 font-medium">Leads</th>
+                        <th class="text-right px-3 py-2 font-medium">CPL</th>
+                        <th class="text-left px-3 py-2 font-medium">Status</th>
+                      </tr></thead>
+                      <tbody>
+                        <!-- loading state -->
+                        <tr x-show="campaignLoadingId === c.id">
+                          <td colspan="8" class="px-4 py-4 text-center text-xs text-gray-600">Loading campaigns…</td>
+                        </tr>
+                        <template x-for="camp in (campaignData[c.account_id] || [])" :key="camp.id || camp.name">
+                          <tr class="border-b border-[#1e2a3a]/50">
+                            <td class="px-4 py-2 text-gray-200 font-medium" x-text="camp.name"></td>
+                            <td class="px-3 py-2 text-gray-400" x-text="camp.objective || '—'"></td>
+                            <td class="px-3 py-2 text-right text-gray-300" x-text="camp.spend ? '$'+Number(camp.spend).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'"></td>
+                            <td class="px-3 py-2 text-right text-gray-300" x-text="camp.impressions ? Number(camp.impressions).toLocaleString() : '—'"></td>
+                            <td class="px-3 py-2 text-right" :class="parseFloat(camp.ctr)>2?'metric-up':'metric-warn'" x-text="camp.ctr ? camp.ctr+'%' : '—'"></td>
+                            <td class="px-3 py-2 text-right text-white font-semibold" x-text="camp.leads ?? '—'"></td>
+                            <td class="px-3 py-2 text-right" :class="camp.cpl && camp.cpl<35?'metric-up':'metric-warn'" x-text="camp.cpl ? '$'+Number(camp.cpl).toFixed(2) : '—'"></td>
+                            <td class="px-3 py-2"><span :class="'s-'+(camp.status||'').toLowerCase()" class="text-xs px-1.5 py-0.5 rounded-full font-medium" x-text="camp.status || '—'"></span></td>
+                          </tr>
+                        </template>
+                        <tr x-show="!campaignLoadingId && !(campaignData[c.account_id]||[]).length">
+                          <td colspan="8" class="px-4 py-4 text-center text-xs text-gray-600">No active campaigns found</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+
+        <!-- Color key -->
+        <div class="px-4 py-3 border-t border-[#1e2a3a] flex items-center gap-5 text-xs text-gray-600">
+          <span class="font-medium text-gray-500">Performance key:</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500"></span>Good</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Watch</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span>Action needed</span>
+          <span class="ml-auto">CPL &lt;$30 = good · Frequency &lt;2.5 = good</span>
+        </div>
+      </div>
+
+      <!-- Bottom row: spend chart + top clients -->
+      <div class="grid grid-cols-3 gap-4 mt-4">
+        <div class="card p-5 col-span-2">
+          <div class="flex items-center justify-between mb-4">
+            <div><h3 class="text-sm font-semibold text-white">Portfolio Spend & Leads</h3><p class="text-xs text-gray-500">All clients combined — last 30 days</p></div>
+            <div class="flex gap-4 text-xs text-gray-500">
+              <span class="flex items-center gap-1.5"><span class="w-3 h-px bg-blue-400 inline-block"></span>Spend</span>
+              <span class="flex items-center gap-1.5"><span class="w-3 h-px bg-green-400 inline-block"></span>Leads</span>
+            </div>
+          </div>
+          <canvas id="portfolioChart" height="90"></canvas>
+        </div>
+        <div class="card p-5">
+          <h3 class="text-sm font-semibold text-white mb-1">Top Performers</h3>
+          <p class="text-xs text-gray-500 mb-4">Ranked by lowest CPL</p>
+          <div class="space-y-3">
+            <template x-for="(c, i) in clientsByCPL" :key="c.id">
+              <div class="flex items-center gap-3">
+                <span class="text-xs font-bold text-gray-600 w-4" x-text="(i+1)+'.'"></span>
+                <div :style="'background:'+c.color" class="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold flex-shrink-0" x-text="c.name.charAt(0)"></div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-xs font-semibold text-white truncate" x-text="c.name"></p>
+                  <div class="h-1.5 bg-[#1e2a3a] rounded-full mt-1 overflow-hidden">
+                    <div class="h-full bg-green-500 rounded-full" :style="'width:'+Math.min(30/Math.max(parseFloat(c.cpl?.replace('$','')||99),1)*100,100)+'%'"></div>
+                  </div>
+                </div>
+                <span :class="parseFloat(c.cpl?.replace('$',''))<30?'metric-up':'metric-warn'" class="text-xs font-bold flex-shrink-0" x-text="c.cpl"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ════════════════════════════════════
+         TAB 3 — AD STATISTICS
+    ════════════════════════════════════ -->
+    <div x-show="activeTab==='adstats'" x-cloak>
+
+      <!-- KPI Row -->
+      <div class="grid grid-cols-6 gap-3 mb-5">
+        <template x-for="s in adStatKPIs" :key="s.label">
+          <div class="card p-4">
+            <p class="text-xs text-gray-500 font-medium mb-2" x-text="s.label"></p>
+            <p class="text-xl font-bold text-white mb-0.5" x-text="s.value"></p>
+            <p class="text-xs flex items-center gap-1" :class="s.trendGoodWhenUp?(s.trend>0?'metric-up':'metric-down'):(s.trend>0?'metric-down':'metric-up')">
+              <span x-text="s.trend>0?'↑':'↓'"></span>
+              <span x-text="Math.abs(s.trend)+'%'"></span>
+              <span class="text-gray-600">vs prior</span>
+            </p>
+          </div>
+        </template>
+      </div>
+
+      <!-- Row 1: Niche Performance + Objective Mix -->
+      <div class="grid grid-cols-3 gap-4 mb-4">
+
+        <!-- Performance by Niche -->
+        <div class="card p-5 col-span-2">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-sm font-semibold text-white">Performance by Niche</h3>
+              <p class="text-xs text-gray-500">Avg CPL and ROAS across all clients, grouped by service type</p>
+            </div>
+            <div class="flex gap-4 text-xs text-gray-500">
+              <span class="flex items-center gap-1.5"><span class="w-3 h-px bg-blue-400 inline-block"></span>Avg CPL ($)</span>
+              <span class="flex items-center gap-1.5"><span class="w-3 h-px bg-amber-400 inline-block"></span>ROAS (x)</span>
+            </div>
+          </div>
+          <canvas id="nicheChart" height="100"></canvas>
+        </div>
+
+        <!-- Objective Mix -->
+        <div class="card p-5">
+          <h3 class="text-sm font-semibold text-white mb-1">Spend by Objective</h3>
+          <p class="text-xs text-gray-500 mb-4">How budget is allocated across campaign goals</p>
+          <canvas id="objectiveChart" height="140"></canvas>
+          <div class="space-y-2 mt-4">
+            <template x-for="o in objectiveMix" :key="o.label">
+              <div class="flex items-center justify-between text-xs">
+                <span class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full flex-shrink-0" :style="'background:'+o.color"></span>
+                  <span class="text-gray-400" x-text="o.label"></span>
+                </span>
+                <span class="text-gray-200 font-semibold" x-text="o.pct+'% · '+o.spend"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: ROAS Trend + Day-of-Week CPL + Frequency Health -->
+      <div class="grid grid-cols-3 gap-4 mb-4">
+
+        <!-- ROAS Trend -->
+        <div class="card p-5">
+          <h3 class="text-sm font-semibold text-white mb-1">ROAS Trend</h3>
+          <p class="text-xs text-gray-500 mb-4">Portfolio avg return on ad spend — 30 days</p>
+          <canvas id="roasTrendChart" height="120"></canvas>
+        </div>
+
+        <!-- Day-of-Week CPL -->
+        <div class="card p-5">
+          <h3 class="text-sm font-semibold text-white mb-1">CPL by Day of Week</h3>
+          <p class="text-xs text-gray-500 mb-4">Cheapest leads come in mid-week — use for scheduling</p>
+          <canvas id="dowChart" height="120"></canvas>
+        </div>
+
+        <!-- Frequency Health -->
+        <div class="card p-5">
+          <h3 class="text-sm font-semibold text-white mb-1">Ad Frequency Health</h3>
+          <p class="text-xs text-gray-500 mb-4">Keep under 2.5 — above 3.5 signals audience fatigue</p>
+          <div class="space-y-3 mt-2">
+            <template x-for="c in clientsByFreq" :key="c.id">
+              <div class="flex items-center gap-3">
+                <div :style="'background:'+c.color" class="w-5 h-5 rounded flex items-center justify-center text-white text-xs font-bold flex-shrink-0" x-text="c.name.charAt(0)"></div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between mb-1">
+                    <p class="text-xs text-gray-300 truncate" x-text="c.name.split(' ')[0]"></p>
+                    <p class="text-xs font-bold ml-2 flex-shrink-0"
+                      :class="parseFloat(c.freq)<2.5?'metric-up':parseFloat(c.freq)<3.5?'metric-warn':'metric-down'"
+                      x-text="c.freq+'x'"></p>
+                  </div>
+                  <div class="h-1.5 bg-[#1e2a3a] rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all"
+                      :class="parseFloat(c.freq)<2.5?'bg-green-500':parseFloat(c.freq)<3.5?'bg-amber-500':'bg-red-500'"
+                      :style="'width:'+Math.min(parseFloat(c.freq)/5*100,100)+'%'"></div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div class="mt-4 pt-3 border-t border-[#1e2a3a] flex items-center justify-between text-xs">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-500"></span><span class="text-gray-500">&lt;2.5 Healthy</span></span>
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span><span class="text-gray-500">2.5–3.5 Watch</span></span>
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-500"></span><span class="text-gray-500">&gt;3.5 Refresh</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Creatives Table -->
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-sm font-semibold text-white">Top Performing Creatives</h3>
+            <p class="text-xs text-gray-500">Best individual ads across all clients — ranked by CPL</p>
+          </div>
+          <div class="flex gap-2">
+            <button class="bg-[#0a0e18] border border-[#1e2a3a] text-gray-400 text-xs px-3 py-1.5 rounded-lg hover:border-blue-500 flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              Export
+            </button>
+          </div>
+        </div>
+        <table class="w-full text-xs">
+          <thead>
+            <tr class="text-left text-gray-500 border-b border-[#1e2a3a]">
+              <th class="pb-2 font-semibold uppercase tracking-wider">Ad Name</th>
+              <th class="pb-2 font-semibold uppercase tracking-wider">Client</th>
+              <th class="pb-2 font-semibold uppercase tracking-wider">Format</th>
+              <th class="pb-2 text-right font-semibold uppercase tracking-wider">Spend</th>
+              <th class="pb-2 text-right font-semibold uppercase tracking-wider">Impressions</th>
+              <th class="pb-2 text-right font-semibold uppercase tracking-wider">CTR</th>
+              <th class="pb-2 text-right font-semibold uppercase tracking-wider">Leads</th>
+              <th class="pb-2 text-right font-semibold uppercase tracking-wider">CPL</th>
+              <th class="pb-2 text-right font-semibold uppercase tracking-wider">ROAS</th>
+              <th class="pb-2 font-semibold uppercase tracking-wider">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#1e2a3a]">
+            <template x-for="ad in topCreatives" :key="ad.id">
+              <tr>
+                <td class="py-3 pr-4">
+                  <p class="font-semibold text-gray-200 line-clamp-1 max-w-[200px]" x-text="ad.name"></p>
+                  <p class="text-gray-600 mt-0.5" x-text="ad.hook"></p>
+                </td>
+                <td class="py-3 pr-4">
+                  <div class="flex items-center gap-2">
+                    <div :style="'background:'+getClientColor(ad.client)" class="w-5 h-5 rounded flex items-center justify-center text-white font-bold text-xs flex-shrink-0" x-text="ad.client.charAt(0)"></div>
+                    <span class="text-gray-300 truncate" x-text="ad.client.split(' ')[0]"></span>
+                  </div>
+                </td>
+                <td class="py-3 pr-4">
+                  <span :class="ad.format==='Video'?'bg-blue-950/60 text-blue-300':ad.format==='Carousel'?'bg-purple-950/60 text-purple-300':ad.format==='Single Image'?'bg-gray-800 text-gray-400':'bg-green-950/60 text-green-300'" class="text-xs px-1.5 py-0.5 rounded" x-text="ad.format"></span>
+                </td>
+                <td class="py-3 text-right text-gray-300" x-text="ad.spend"></td>
+                <td class="py-3 text-right text-gray-300" x-text="ad.impressions"></td>
+                <td class="py-3 text-right">
+                  <span :class="parseFloat(ad.ctr)>=3?'metric-up':parseFloat(ad.ctr)>=2?'metric-warn':'text-gray-400'" class="font-semibold" x-text="ad.ctr+'%'"></span>
+                </td>
+                <td class="py-3 text-right font-bold text-white" x-text="ad.leads"></td>
+                <td class="py-3 text-right">
+                  <span :class="parseFloat(ad.cpl.replace('$',''))<25?'metric-up':parseFloat(ad.cpl.replace('$',''))<40?'metric-warn':'metric-down'" class="font-bold" x-text="ad.cpl"></span>
+                </td>
+                <td class="py-3 text-right">
+                  <span :class="parseFloat(ad.roas)>=5?'metric-up':parseFloat(ad.roas)>=3?'metric-warn':'metric-down'" class="font-bold" x-text="ad.roas+'x'"></span>
+                </td>
+                <td class="py-3">
+                  <span :class="'s-'+ad.status.toLowerCase()" class="text-xs px-2 py-0.5 rounded-full font-semibold" x-text="ad.status"></span>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- ════════════════════════════════════
+         TAB 4 — COMPETITOR INTELLIGENCE
+    ════════════════════════════════════ -->
+    <div x-show="activeTab==='competitors'" x-cloak>
+
+      <!-- Service sub-tabs -->
+      <div class="flex items-center gap-3 mb-5 flex-wrap">
+        <div class="flex bg-[#0f1623] border border-[#1e2a3a] rounded-xl p-1 gap-1">
+          <template x-for="svc in competitorServices" :key="svc.id">
+            <button @click="competitorService = svc.id; competitorAds = competitorCache[svc.id] || []"
+              :class="competitorService === svc.id ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-200'"
+              class="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all"
+              x-text="svc.label">
+            </button>
+          </template>
+        </div>
+        <!-- Timeline filter -->
+        <div class="flex bg-[#0f1623] border border-[#1e2a3a] rounded-xl p-1 gap-1">
+          <template x-for="tl in competitorTimelines" :key="tl.id">
+            <button @click="competitorTimeline = tl.id"
+              :class="competitorTimeline === tl.id ? 'bg-[#1e2a3a] text-white' : 'text-gray-500 hover:text-gray-300'"
+              class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+              x-text="tl.label">
+            </button>
+          </template>
+        </div>
+        <div class="ml-auto flex items-center gap-2">
+          <span x-show="competitorAdsFiltered.length" class="text-xs text-gray-500" x-text="competitorAdsFiltered.length + ' ads'"></span>
+          <button @click="fetchCompetitors(true)" :disabled="competitorLoading"
+            class="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg disabled:opacity-40 transition-colors">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="13" height="13" :class="competitorLoading?'animate-spin':''"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span x-text="competitorLoading ? 'Loading…' : 'Load New Comp Ads'"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Context pill -->
+      <div class="flex items-center gap-2 mb-4 flex-wrap">
+        <span class="text-xs text-gray-600">Tracking keywords:</span>
+        <template x-for="kw in (competitorServices.find(s => s.id === competitorService)?.keywords || [])" :key="kw">
+          <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-950/40 text-blue-400 border border-blue-900/40" x-text="kw"></span>
+        </template>
+      </div>
+
+      <!-- Loading -->
+      <div x-show="competitorLoading && !competitorAds.length" class="flex flex-col items-center justify-center py-24 text-gray-600">
+        <svg class="w-6 h-6 animate-spin mb-3 text-blue-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+        <p class="text-sm">Searching Meta Ad Library…</p>
+        <p class="text-xs text-gray-600 mt-1">First load takes ~2 min — cached for 2 hrs after that</p>
+      </div>
+
+      <!-- Error -->
+      <div x-show="competitorError && !competitorAds.length" class="card p-6 text-center">
+        <p class="text-red-400 text-sm font-medium mb-1">Ad Library unavailable</p>
+        <p class="text-gray-600 text-xs" x-text="competitorError"></p>
+        <p class="text-gray-600 text-xs mt-2">Make sure <code class="text-blue-400">META_ACCESS_TOKEN</code> has <code class="text-blue-400">ads_read</code> scope.</p>
+      </div>
+
+      <!-- Ad cards grid -->
+      <div x-show="competitorAdsFiltered.length" class="grid grid-cols-1 gap-4" style="grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));">
+        <template x-for="ad in competitorAdsFiltered" :key="ad.id">
+          <div x-data="{ expanded: false }" class="card overflow-hidden flex flex-col hover:border-blue-900/60 transition-colors">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between gap-2 px-4 pt-4 pb-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <template x-if="ad.brand_logo">
+                  <img :src="ad.brand_logo" class="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-[#1e2a3a]" loading="lazy">
+                </template>
+                <template x-if="!ad.brand_logo">
+                  <div class="w-9 h-9 rounded-full bg-blue-950 border border-blue-900/50 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
+                  </div>
+                </template>
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-white leading-tight truncate" x-text="ad.page_name || 'Unknown Page'"></p>
+                  <p class="text-xs text-gray-500 leading-tight">Sponsored · <span x-text="fmtPlatforms(ad.platforms)"></span></p>
+                </div>
+              </div>
+              <div x-show="ad.days_running != null"
+                :class="ad.days_running >= 60 ? 'bg-green-950/60 border-green-800/40 text-green-400' : ad.days_running >= 21 ? 'bg-amber-950/60 border-amber-800/40 text-amber-400' : 'bg-[#0f1623] border-[#1e2a3a] text-gray-500'"
+                class="flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap"
+                x-text="ad.days_running + 'd running'">
+              </div>
+            </div>
+
+            <!-- Ad copy -->
+            <div x-show="ad.body" class="px-4 pb-3">
+              <p class="text-xs text-gray-300 leading-relaxed"
+                :class="expanded ? '' : 'line-clamp-3'"
+                x-text="ad.body"></p>
+              <button x-show="ad.body && ad.body.length > 160"
+                @click="expanded = !expanded"
+                class="text-xs text-blue-400 hover:text-blue-300 mt-1 font-medium"
+                x-text="expanded ? 'See less' : 'See more'">
+              </button>
+            </div>
+
+            <!-- Video creative -->
+            <template x-if="ad.video_url || (ad.videos && ad.videos[0]?.url)">
+              <div class="w-full bg-black">
+                <video
+                  :src="ad.video_url || ad.videos[0]?.url"
+                  controls
+                  preload="metadata"
+                  referrerpolicy="no-referrer"
+                  class="w-full max-h-72 object-contain"
+                  style="display:block">
+                </video>
+              </div>
+            </template>
+
+            <!-- Image creative (first image, with count badge if multiple) -->
+            <template x-if="!(ad.video_url || (ad.videos && ad.videos[0]?.url))">
+              <template x-if="(ad.image_urls && ad.image_urls.length) || (ad.images && ad.images[0]?.url)">
+                <div class="relative w-full bg-black">
+                  <img :src="ad.image_urls?.[0] || ad.images?.[0]?.url" class="w-full max-h-72 object-contain" loading="lazy" style="display:block">
+                  <div x-show="(ad.image_urls?.length || ad.images?.length) > 1"
+                    class="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full font-medium"
+                    x-text="'1 / ' + (ad.image_urls?.length || ad.images?.length)">
+                  </div>
+                </div>
+              </template>
+            </template>
+
+            <!-- Link preview + CTA -->
+            <template x-if="ad.title || ad.description || ad.cta_text">
+              <div class="flex items-center justify-between gap-3 px-3 py-2.5 bg-[#0d1520] border-t border-[#1e2a3a]">
+                <div class="min-w-0">
+                  <p x-show="ad.title" class="text-xs font-semibold text-white truncate" x-text="ad.title"></p>
+                  <p x-show="ad.description" class="text-xs text-gray-500 truncate" x-text="ad.description"></p>
+                </div>
+                <a x-show="ad.cta_text && ad.cta_url" :href="ad.cta_url" target="_blank" rel="noopener"
+                  class="flex-shrink-0 text-xs font-semibold bg-[#1e2a3a] hover:bg-[#243347] text-white px-3 py-1.5 rounded-md transition-colors whitespace-nowrap"
+                  x-text="ad.cta_text">
+                </a>
+                <span x-show="ad.cta_text && !ad.cta_url"
+                  class="flex-shrink-0 text-xs font-semibold bg-[#1e2a3a] text-white px-3 py-1.5 rounded-md whitespace-nowrap"
+                  x-text="ad.cta_text">
+                </span>
+              </div>
+            </template>
+
+            <!-- Footer -->
+            <div class="flex items-center justify-between px-4 py-2.5 border-t border-[#1e2a3a]">
+              <div class="flex items-center gap-1.5 text-xs text-gray-600">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2C5.58 2 2 5.58 2 10s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 14.4A6.4 6.4 0 113.6 10 6.4 6.4 0 0110 16.4z"/></svg>
+                <span x-show="ad.similar_ad_count" x-text="ad.similar_ad_count + ' similar ads'"></span>
+                <span x-show="!ad.similar_ad_count">Unique ad</span>
+              </div>
+              <a x-show="ad.snapshot_url" :href="ad.snapshot_url" target="_blank" rel="noopener"
+                class="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 font-medium">
+                Ad Library
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              </a>
+            </div>
+
+          </div>
+        </template>
+      </div>
+
+      <!-- Empty state -->
+      <div x-show="!competitorLoading && !competitorError && !competitorAdsFiltered.length" class="flex flex-col items-center justify-center py-24 text-gray-600">
+        <svg class="w-10 h-10 mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        <p class="text-sm">No ads found for these keywords right now.</p>
+      </div>
+
+    </div><!-- end competitors tab -->
+
+  </div><!-- end content -->
+</main>
+
+<script>
+function agency() {
+  return {
+    activeTab: 'tasks',
+
+    // ─── Team Tasks (notebook) ───────────────────────────────────────────────
+    taskDate: new Date().toISOString().slice(0, 10),
+    todosByDate: {
+      johann:   JSON.parse(localStorage.getItem('notebook:johann')   || '{}'),
+      santiago: JSON.parse(localStorage.getItem('notebook:santiago') || '{}'),
+    },
+    newTodo: { johann: '', santiago: '' },
+    statusFilter: 'All',
+    nicheFilter: 'All',
+    searchQuery: '',
+    expandedClient: null,
+
+    // ─── Client notes ─────────────────────────────────────────────────────
+    clientNotes: JSON.parse(localStorage.getItem('clientNotes') || '{}'),
+    noteOpen: null,
+    noteDraft: '',
+
+    dateRange: '30d',
+    healthFilter: 'All',
+    _charts: {},
+    _refreshTimer: null,
+
+    timeFrames: [
+      { id: 'today',     label: 'Today',    refreshMs: 5  * 60 * 1000 },
+      { id: 'yesterday', label: 'Yesterday',refreshMs: 30 * 60 * 1000 },
+      { id: '7d',        label: '7 Days',   refreshMs: 60 * 60 * 1000 },
+      { id: '14d',       label: '14 Days',  refreshMs: 2  * 60 * 60 * 1000 },
+      { id: '30d',       label: '30 Days',  refreshMs: 4  * 60 * 60 * 1000 },
+    ],
+
+    // ─── Competitor Intel state ───────────────────────────────────────────
+    campaignData: {},
+    campaignLoadingId: null,
+
+    competitorService: 'ppf',
+    competitorTimeline: '5',
+    competitorAds: [],
+    competitorCache: {},
+    competitorLoading: false,
+    competitorError: null,
+    competitorTimelines: [
+      { id: '5',  label: '5d+',  min: 5,  max: 19 },
+      { id: '20', label: '20d+', min: 20, max: 39 },
+      { id: '40', label: '40d+', min: 40, max: 59 },
+      { id: '60', label: '60d+', min: 60, max: 90 },
+    ],
+    competitorServices: [
+      { id: 'ppf',      label: 'PPF',             keywords: ['paint protection film installation near me','PPF installer near me','clear bra installation service','paint protection film shop','XPEL certified installer'] },
+      { id: 'ceramic',  label: 'Ceramic Coating',  keywords: ['ceramic coating service near me','ceramic coating shop near me','get ceramic coating near me','professional ceramic coating installer','ceramic coating appointment'] },
+      { id: 'tinting',  label: 'Window Tinting',   keywords: ['window tinting shop near me','car window tinting service near me','auto tint shop near me','window tinting appointment','window tinting installer near me'] },
+      { id: 'detailing',label: 'Detailing',        keywords: ['mobile detailing service near me','auto detailing shop near me','mobile car detailer near me','car detailing appointment','professional detailing service near me'] },
+    ],
+
+    // ─── Live data state ──────────────────────────────────────────────────
+    liveMode:    false,
+    loading:     false,
+    lastUpdated: null,
+    apiError:    null,
+    API_BASE:    '',
+
+    get portfolioKPIs() {
+      const live = this.clients.filter(c => c._live);
+      if (!live.length) {
+        return [
+          { label:'Active Clients',  value:'8',       trend: 14.3 },
+          { label:'Total Spend MTD', value:'$19,640',  trend:  8.2 },
+          { label:'Total Leads',     value:'612',      trend: 22.7 },
+          { label:'Avg. CPL',        value:'$32.09',   trend:-11.4 },
+        ];
+      }
+      const active     = live.filter(c => c.adStatus === 'Active').length;
+      const totalSpend = live.reduce((s, c) => s + (parseFloat(c.spendMTD?.replace(/[$,]/g,'')) || 0), 0);
+      const totalLeads = live.reduce((s, c) => s + (parseInt(c.leads) || 0), 0);
+      const avgCPL     = totalLeads > 0 ? totalSpend / totalLeads : null;
+      return [
+        { label:'Active Clients',  value: String(active),                                                                                                  trend: 0 },
+        { label:'Total Spend MTD', value: '$' + totalSpend.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}),                    trend: 0 },
+        { label:'Total Leads',     value: String(totalLeads),                                                                                              trend: 0 },
+        { label:'Avg. CPL',        value: avgCPL != null ? '$' + avgCPL.toFixed(2) : '—',                                                                 trend: 0 },
+      ];
+    },
+
+    clients: [
+      { id:1, name:"Mike's Auto Spa",    city:'Phoenix, AZ',   color:'#2563eb', niche:'Detail',  adStatus:'Active',   dailyBudget:'$75',  spendMTD:'$2,180', reach:'48K',  leads:84,  cpl:'$25.95', roas:'5.2', freq:'2.1', ctr:2.95,
+        prev:{ cpl:28.40, leads:72, spend:1940, ctr:2.70, freq:1.80 },
+        campaigns:[
+          {name:'Full Detail — Phoenix Leads', objective:'Lead Form',        spend:'$1,420', impressions:'62K',  ctr:'2.8', leads:52, cpl:'$27.31', status:'Active'},
+          {name:'Interior Ceramic — Upsell',  objective:'Message/DM',       spend:'$760',  impressions:'28K',  ctr:'3.1', leads:32, cpl:'$23.75', status:'Active'},
+        ]},
+      { id:2, name:'Gloss Elite Coating', city:'Miami, FL',     color:'#f59e0b', niche:'Ceramic', adStatus:'Active',   dailyBudget:'$120', spendMTD:'$3,480', reach:'72K',  leads:97,  cpl:'$35.87', roas:'6.1', freq:'1.9', ctr:2.67,
+        prev:{ cpl:33.20, leads:89, spend:3180, ctr:2.50, freq:1.70 },
+        campaigns:[
+          {name:'Ceramic Coating — Luxury Cars', objective:'Lead Form',   spend:'$2,100', impressions:'41K',  ctr:'3.4', leads:58, cpl:'$36.21', status:'Active'},
+          {name:'9H Ceramic — Brand Awareness',  objective:'Reach',      spend:'$820',  impressions:'22K',  ctr:'1.9', leads:21, cpl:'$39.05', status:'Active'},
+          {name:'PPF + Ceramic Bundle',          objective:'Lead Form',   spend:'$560',  impressions:'9K',   ctr:'2.7', leads:18, cpl:'$31.11', status:'Learning'},
+        ]},
+      { id:3, name:'CrystalShield Tint',  city:'Atlanta, GA',   color:'#8b5cf6', niche:'Tint',    adStatus:'Active',   dailyBudget:'$60',  spendMTD:'$1,740', reach:'39K',  leads:62,  cpl:'$28.06', roas:'4.8', freq:'2.3', ctr:2.70,
+        prev:{ cpl:31.40, leads:55, spend:1590, ctr:2.50, freq:2.50 },
+        campaigns:[
+          {name:'Window Tint — ATL Specials', objective:'Lead Form',     spend:'$1,100', impressions:'29K',  ctr:'3.0', leads:39, cpl:'$28.21', status:'Active'},
+          {name:'Ceramic Tint Upgrade',       objective:'Message/DM',    spend:'$640',  impressions:'10K',  ctr:'2.4', leads:23, cpl:'$27.83', status:'Active'},
+        ]},
+      { id:4, name:'ProDetail STL',       city:'St. Louis, MO', color:'#10b981', niche:'Mobile',  adStatus:'Active',   dailyBudget:'$50',  spendMTD:'$1,450', reach:'31K',  leads:71,  cpl:'$20.42', roas:'5.9', freq:'2.0', ctr:3.25,
+        prev:{ cpl:22.80, leads:60, spend:1300, ctr:3.00, freq:1.70 },
+        campaigns:[
+          {name:'Mobile Detail — We Come to You', objective:'Lead Form', spend:'$950',  impressions:'24K',  ctr:'3.6', leads:47, cpl:'$20.21', status:'Active'},
+          {name:'Fleet Detailing — Business Owners', objective:'Lead Form', spend:'$500', impressions:'7K',  ctr:'2.9', leads:24, cpl:'$20.83', status:'Active'},
+        ]},
+      { id:5, name:'Luxe Auto Wrap',      city:'Los Angeles, CA', color:'#ec4899', niche:'Wrap',   adStatus:'Active',   dailyBudget:'$90',  spendMTD:'$2,610', reach:'58K',  leads:68,  cpl:'$38.38', roas:'3.8', freq:'2.6', ctr:2.45,
+        prev:{ cpl:34.50, leads:75, spend:2380, ctr:2.70, freq:2.20 },
+        campaigns:[
+          {name:'Vinyl Wrap — Color Change',    objective:'Lead Form',   spend:'$1,800', impressions:'40K',  ctr:'2.1', leads:44, cpl:'$40.91', status:'Active'},
+          {name:'Chrome Delete — Trending',     objective:'Message/DM',  spend:'$810',  impressions:'18K',  ctr:'2.8', leads:24, cpl:'$33.75', status:'Learning'},
+        ]},
+      { id:6, name:'Prestige Detail TX',  city:'Dallas, TX',    color:'#3b82f6', niche:'Detail',  adStatus:'Learning', dailyBudget:'$80',  spendMTD:'$1,920', reach:'42K',  leads:49,  cpl:'$39.18', roas:'3.2', freq:'1.8', ctr:2.00,
+        prev:{ cpl:40.20, leads:44, spend:1740, ctr:1.90, freq:1.50 },
+        campaigns:[
+          {name:'Premium Detail — DFW',       objective:'Lead Form',     spend:'$1,200', impressions:'28K',  ctr:'1.8', leads:30, cpl:'$40.00', status:'Learning'},
+          {name:'Paint Correction — Showcase', objective:'Video Views',  spend:'$720',  impressions:'14K',  ctr:'2.2', leads:19, cpl:'$37.89', status:'Active'},
+        ]},
+      { id:7, name:'SparkleShield Chi',   city:'Chicago, IL',   color:'#14b8a6', niche:'Ceramic', adStatus:'Active',   dailyBudget:'$65',  spendMTD:'$1,890', reach:'44K',  leads:88,  cpl:'$21.48', roas:'5.4', freq:'2.2', ctr:3.10,
+        prev:{ cpl:24.10, leads:75, spend:1710, ctr:2.90, freq:2.00 },
+        campaigns:[
+          {name:'Graphene Ceramic — Chicago',  objective:'Lead Form',    spend:'$1,300', impressions:'31K',  ctr:'3.2', leads:59, cpl:'$22.03', status:'Active'},
+          {name:'Ceramic + Window Tint Bundle', objective:'Lead Form',   spend:'$590',  impressions:'13K',  ctr:'3.0', leads:29, cpl:'$20.34', status:'Active'},
+        ]},
+      { id:8, name:'AquaGuard PPF',       city:'Denver, CO',    color:'#f97316', niche:'PPF',     adStatus:'Paused',   dailyBudget:'$100', spendMTD:'$1,370', reach:'29K',  leads:43,  cpl:'$31.86', roas:'4.1', freq:'3.2', ctr:1.90,
+        prev:{ cpl:26.50, leads:58, spend:2100, ctr:2.40, freq:2.70 },
+        campaigns:[
+          {name:'PPF Full Front — Denver',     objective:'Lead Form',    spend:'$900',  impressions:'19K',  ctr:'2.0', leads:27, cpl:'$33.33', status:'Paused'},
+          {name:'Self-Healing PPF — Showcase', objective:'Video Views',  spend:'$470',  impressions:'10K',  ctr:'1.8', leads:16, cpl:'$29.38', status:'Paused'},
+        ]},
+    ],
+
+
+    get competitorAdsFiltered() {
+      const tl = this.competitorTimelines.find(t => t.id === this.competitorTimeline);
+      if (!tl) return this.competitorAds;
+      return this.competitorAds.filter(ad => {
+        const d = ad.days_running;
+        return d != null && d >= tl.min && d <= tl.max;
+      });
+    },
+
+    get filteredClients() {
+      return this.clients.filter(c => {
+        const matchStatus = this.statusFilter==='All' || c.adStatus===this.statusFilter;
+        const matchNiche  = this.nicheFilter==='All'  || c.niche===this.nicheFilter;
+        const matchSearch = !this.searchQuery || c.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || c.city.toLowerCase().includes(this.searchQuery.toLowerCase());
+        const matchHealth = this.healthFilter==='All' || this.clientStatus(c) === this.healthFilter.toLowerCase().replace(/ /g,'-');
+        return matchStatus && matchNiche && matchSearch && matchHealth;
+      });
+    },
+
+    get clientsByCPL() {
+      return [...this.clients]
+        .filter(c => c.cpl && c.cpl !== '$0' && c.leads > 0)
+        .sort((a,b) => (parseFloat(a.cpl?.replace('$','')) || 99) - (parseFloat(b.cpl?.replace('$','')) || 99))
+        .slice(0, 8);
+    },
+
+    },
+
+    get adStatKPIs() {
+      const live = this.clients.filter(c => c._live);
+      if (!live.length) {
+        return [
+          { label:'Total Impressions', value:'4.87M',   trend: 18.4, trendGoodWhenUp: true  },
+          { label:'Total Clicks',      value:'133.6K',  trend: 22.1, trendGoodWhenUp: true  },
+          { label:'Avg CTR',           value:'2.74%',   trend:  8.3, trendGoodWhenUp: true  },
+          { label:'Total Spend MTD',   value:'$19,640', trend:  8.2, trendGoodWhenUp: false },
+          { label:'Avg CPC',           value:'$0.15',   trend: -8.2, trendGoodWhenUp: false },
+          { label:'Avg Frequency',     value:'2.26',    trend:  4.6, trendGoodWhenUp: false },
+        ];
+      }
+      const totalImp   = live.reduce((s, c) => s + (parseInt(c.impressions) || 0), 0);
+      const totalClk   = live.reduce((s, c) => s + (parseInt(c.clicks) || 0), 0);
+      const totalSpend = live.reduce((s, c) => s + (parseFloat(c.spendMTD?.replace(/[$,]/g,'')) || 0), 0);
+      const avgCTR     = totalImp > 0 ? (totalClk / totalImp * 100) : 0;
+      const avgCPC     = totalClk > 0 ? totalSpend / totalClk : null;
+      const avgFreq    = live.length > 0 ? live.reduce((s, c) => s + (parseFloat(c.frequency) || 0), 0) / live.length : 0;
+      const fmtBig = n => {
+        if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M';
+        if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K';
+        return String(n);
+      };
+      return [
+        { label:'Total Impressions', value: fmtBig(totalImp),                                                                                         trend: 0, trendGoodWhenUp: true  },
+        { label:'Total Clicks',      value: fmtBig(totalClk),                                                                                         trend: 0, trendGoodWhenUp: true  },
+        { label:'Avg CTR',           value: avgCTR.toFixed(2) + '%',                                                                                  trend: 0, trendGoodWhenUp: true  },
+        { label:'Total Spend MTD',   value: '$' + totalSpend.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}),              trend: 0, trendGoodWhenUp: false },
+        { label:'Avg CPC',           value: avgCPC != null ? '$' + avgCPC.toFixed(2) : '—',                                                           trend: 0, trendGoodWhenUp: false },
+        { label:'Avg Frequency',     value: avgFreq.toFixed(2),                                                                                       trend: 0, trendGoodWhenUp: false },
+      ];
+    },
+
+    objectiveMix: [
+      { label:'Lead Form',    pct:62, spend:'$12,177', color:'#2563eb' },
+      { label:'Message / DM', pct:21, spend:'$4,124',  color:'#34d399' },
+      { label:'Video Views',  pct:11, spend:'$2,160',  color:'#f472b6' },
+      { label:'Reach',        pct: 6, spend:'$1,178',  color:'#fbbf24' },
+    ],
+
+    topCreatives: [
+      { id:1,  name:'We Come to You — Mobile Detail',     hook:'Pain hook: skip the drive',          client:"ProDetail STL",       format:'Video',        spend:'$480',  impressions:'19K',  ctr:'3.8', leads:24, cpl:'$20.00', roas:'6.2', status:'Active'   },
+      { id:2,  name:'Fleet Owners — We Handle the Rest',  hook:'Niche B2B angle',                    client:"ProDetail STL",       format:'Single Image', spend:'$290',  impressions:'8K',   ctr:'3.2', leads:14, cpl:'$20.71', roas:'5.8', status:'Active'   },
+      { id:3,  name:'Graphene Ceramic — The Upgrade',     hook:'Product education + outcome',        client:"SparkleShield Chi",   format:'Video',        spend:'$640',  impressions:'24K',  ctr:'3.5', leads:29, cpl:'$22.07', roas:'5.9', status:'Active'   },
+      { id:4,  name:'Full Detail Phoenix — Book Now',     hook:'Urgency + local callout',            client:"Mike's Auto Spa",     format:'Single Image', spend:'$720',  impressions:'31K',  ctr:'2.9', leads:28, cpl:'$25.71', roas:'5.4', status:'Active'   },
+      { id:5,  name:'Interior Ceramic — Before / After',  hook:'Visual transformation proof',        client:"Mike's Auto Spa",     format:'Carousel',     spend:'$390',  impressions:'14K',  ctr:'3.1', leads:15, cpl:'$26.00', roas:'4.9', status:'Active'   },
+      { id:6,  name:'ATL Window Tint — This Week Only',  hook:'Urgency + local scarcity',           client:"CrystalShield Tint",  format:'Video',        spend:'$540',  impressions:'21K',  ctr:'3.0', leads:20, cpl:'$27.00', roas:'4.8', status:'Active'   },
+      { id:7,  name:'Ceramic Coating Miami — Luxury',    hook:'Premium positioning',                client:"Gloss Elite Coating", format:'Video',        spend:'$1,050',impressions:'22K',  ctr:'3.2', leads:31, cpl:'$33.87', roas:'6.4', status:'Active'   },
+      { id:8,  name:'PPF Full Front — Denver Special',   hook:'Price anchor + protection story',    client:"AquaGuard PPF",       format:'Single Image', spend:'$460',  impressions:'10K',  ctr:'2.1', leads:14, cpl:'$32.86', roas:'4.2', status:'Paused'   },
+      { id:9,  name:'Vinyl Wrap Color Change — Reveal',  hook:'Transformation video, high shareability',client:"Luxe Auto Wrap",  format:'Video',        spend:'$920',  impressions:'21K',  ctr:'2.2', leads:23, cpl:'$40.00', roas:'3.9', status:'Active'   },
+      { id:10, name:'Paint Correction DFW Showcase',     hook:'Process video builds trust',         client:"Prestige Detail TX",  format:'Video',        spend:'$720',  impressions:'14K',  ctr:'2.2', leads:19, cpl:'$37.89', roas:'3.2', status:'Learning' },
+    ],
+
+    get clientsByFreq() {
+      return [...this.clients].sort((a,b) => parseFloat(b.freq) - parseFloat(a.freq));
+    },
+
+    getClientColor(name) {
+      const c = this.clients.find(cl => cl.name.startsWith(name.split(' ')[0]));
+      return c ? c.color : '#2563eb';
+    },
+
+    initAdStatsCharts() {
+      // Niche grouped bar
+      const ctx1 = document.getElementById('nicheChart');
+      if (ctx1) {
+        if (this._charts.niche) this._charts.niche.destroy();
+        this._charts.niche = new Chart(ctx1, {
+          type: 'bar',
+          data: {
+            labels: ['Ceramic','Tint','PPF','Detail','Mobile','Wrap'],
+            datasets: [
+              { label:'Avg CPL ($)', data:[34,28,32,24,20,38], backgroundColor:'rgba(37,99,235,0.6)', borderColor:'#2563eb', borderWidth:1, borderRadius:4 },
+              { label:'ROAS (x)',    data:[5.4,4.8,4.1,5.3,5.9,3.8], backgroundColor:'rgba(251,191,36,0.4)', borderColor:'#fbbf24', borderWidth:1, borderRadius:4, yAxisID:'y2' },
+            ]
+          },
+          options: {
+            responsive:true,
+            interaction:{ mode:'index', intersect:false },
+            plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1e2a3a', titleColor:'#e2e8f0', bodyColor:'#9ca3af', borderColor:'#374151', borderWidth:1 }},
+            scales:{
+              x:{ grid:{display:false}, ticks:{color:'#6b7280', font:{size:10}} },
+              y:{ grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#6b7280', font:{size:10}, callback:v=>'$'+v}, title:{display:true, text:'CPL ($)', color:'#6b7280', font:{size:9}} },
+              y2:{ position:'right', grid:{display:false}, ticks:{color:'#fbbf24', font:{size:10}, callback:v=>v+'x'}, title:{display:true, text:'ROAS', color:'#fbbf24', font:{size:9}} }
+            }
+          }
+        });
+      }
+
+      // Objective doughnut
+      const ctx2 = document.getElementById('objectiveChart');
+      if (ctx2) {
+        if (this._charts.objective) this._charts.objective.destroy();
+        this._charts.objective = new Chart(ctx2, {
+          type: 'doughnut',
+          data: {
+            labels:['Lead Form','Message / DM','Video Views','Reach'],
+            datasets:[{ data:[62,21,11,6], backgroundColor:['#2563eb','#34d399','#f472b6','#fbbf24'], borderWidth:0, hoverOffset:4 }]
+          },
+          options:{ responsive:true, plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1e2a3a', titleColor:'#e2e8f0', bodyColor:'#9ca3af', borderColor:'#374151', borderWidth:1, callbacks:{label:ctx=>' '+ctx.raw+'%'} }}, cutout:'68%' }
+        });
+      }
+
+      // ROAS trend line
+      const ctx3 = document.getElementById('roasTrendChart');
+      if (ctx3) {
+        if (this._charts.roas) this._charts.roas.destroy();
+        const labels = Array.from({length:30},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(29-i)); return d.toLocaleDateString('en',{month:'short',day:'numeric'}); });
+        this._charts.roas = new Chart(ctx3, {
+          type:'line',
+          data:{ labels, datasets:[{ label:'Avg ROAS', data:[3.8,3.9,4.0,3.7,4.1,4.2,4.0,4.3,4.1,4.4,4.2,4.5,4.3,4.6,4.4,4.5,4.3,4.7,4.5,4.8,4.6,4.7,4.5,4.9,4.7,5.0,4.8,4.9,4.7,5.1], borderColor:'#34d399', backgroundColor:'rgba(52,211,153,0.08)', tension:0.4, fill:true, pointRadius:0, borderWidth:2 }]},
+          options:{ responsive:true, plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1e2a3a', titleColor:'#e2e8f0', bodyColor:'#9ca3af', borderColor:'#374151', borderWidth:1, callbacks:{label:ctx=>' '+ctx.raw+'x ROAS'} }}, scales:{ x:{grid:{display:false}, ticks:{color:'#6b7280', maxTicksLimit:6, font:{size:9}}}, y:{grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#6b7280', font:{size:9}, callback:v=>v+'x'}, suggestedMin:3, suggestedMax:6} } }
+        });
+      }
+
+      // Day-of-week CPL bar
+      const ctx4 = document.getElementById('dowChart');
+      if (ctx4) {
+        if (this._charts.dow) this._charts.dow.destroy();
+        this._charts.dow = new Chart(ctx4, {
+          type:'bar',
+          data:{
+            labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+            datasets:[{ label:'Avg CPL', data:[31,27,25,23,29,36,39], backgroundColor:['rgba(52,211,153,0.5)','rgba(52,211,153,0.6)','rgba(52,211,153,0.7)','rgba(52,211,153,0.8)','rgba(251,191,36,0.5)','rgba(239,68,68,0.5)','rgba(239,68,68,0.6)'], borderWidth:0, borderRadius:5 }]
+          },
+          options:{ responsive:true, plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1e2a3a', titleColor:'#e2e8f0', bodyColor:'#9ca3af', borderColor:'#374151', borderWidth:1, callbacks:{label:ctx=>' $'+ctx.raw+' CPL'} }}, scales:{ x:{grid:{display:false}, ticks:{color:'#6b7280', font:{size:10}}}, y:{grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#6b7280', font:{size:10}, callback:v=>'$'+v}, suggestedMin:18} } }
+        });
+      }
+    },
+
+    pctChange(curr, prev) {
+      if (!prev) return 0;
+      return (curr - prev) / Math.abs(prev) * 100;
+    },
+
+    fmtChg(curr, prev) {
+      if (!prev) return '';
+      const p = this.pctChange(curr, prev);
+      return (p > 0 ? '+' : '') + p.toFixed(1) + '%';
+    },
+
+    clientAlerts(c) {
+      const alerts = [];
+      const cpl   = parseFloat((c.cpl  || '').replace('$', '')) || 0;
+      const freq  = parseFloat(c.freq)  || 0;
+      const spend = parseFloat((c.spendMTD || '').replace(/[$,]/g, '')) || 0;
+
+      if (c.prev) {
+        const cplChg = this.pctChange(cpl, c.prev.cpl);
+        if (cplChg > 25)      alerts.push({ type:'cpl',      sev:'critical', msg:'CPL +'+cplChg.toFixed(0)+'%' });
+        else if (cplChg > 12) alerts.push({ type:'cpl',      sev:'warn',     msg:'CPL +'+cplChg.toFixed(0)+'%' });
+
+        const leadChg = this.pctChange(c.leads, c.prev.leads);
+        if (leadChg < -20)      alerts.push({ type:'leads', sev:'critical', msg:'Leads '+leadChg.toFixed(0)+'%' });
+        else if (leadChg < -10) alerts.push({ type:'leads', sev:'warn',     msg:'Leads '+leadChg.toFixed(0)+'%' });
+
+        const spendChg = this.pctChange(spend, c.prev.spend);
+        if (spendChg < -30)      alerts.push({ type:'spend', sev:'critical', msg:'Spend '+spendChg.toFixed(0)+'%' });
+        else if (spendChg < -15) alerts.push({ type:'spend', sev:'warn',     msg:'Spend '+spendChg.toFixed(0)+'%' });
+
+        if (c.ctr && c.prev.ctr && c.prev.freq) {
+          const ctrChg  = this.pctChange(c.ctr, c.prev.ctr);
+          const freqChg = this.pctChange(freq, c.prev.freq);
+          if (ctrChg < -8 && freqChg > 8)
+            alerts.push({ type:'creative', sev:'warn', msg:'CTR↓ Freq↑' });
+        }
+      }
+
+      if (freq > 3.5)       alerts.push({ type:'freq', sev:'critical', msg:'Freq '+c.freq+' fatigue' });
+      else if (freq >= 3.0) alerts.push({ type:'freq', sev:'warn',     msg:'Freq '+c.freq+' rising' });
+
+      return alerts;
+    },
+
+    clientHealth(c) {
+      let score = 100;
+      const roas = parseFloat(c.roas) || 0;
+      const cpl  = parseFloat((c.cpl || '').replace('$', '')) || 0;
+      const freq = parseFloat(c.freq) || 0;
+
+      if (roas >= 5)       score += 5;
+      else if (roas < 2.5) score -= 30;
+      else if (roas < 3.5) score -= 18;
+      else if (roas < 4)   score -= 8;
+
+      if (cpl > 50)      score -= 25;
+      else if (cpl > 40) score -= 15;
+      else if (cpl > 30) score -= 6;
+      else if (cpl < 25) score += 5;
+
+      if (freq > 3.5)       score -= 20;
+      else if (freq >= 2.5) score -= 8;
+
+      if (c.adStatus === 'Paused')        score -= 15;
+      else if (c.adStatus === 'Learning') score -= 4;
+
+      const alerts = this.clientAlerts(c);
+      score -= alerts.filter(a => a.sev === 'critical').length * 8;
+      score -= alerts.filter(a => a.sev === 'warn').length * 3;
+
+      return Math.max(0, Math.min(100, Math.round(score)));
+    },
+
+    clientStatus(c) {
+      const h = this.clientHealth(c);
+      return h >= 78 ? 'stable' : h >= 55 ? 'watch' : 'needs-action';
+    },
+
+    get clientsNeedingAction() {
+      return this.clients.filter(c => this.clientStatus(c) === 'needs-action');
+    },
+
+    // ─── Team Tasks (notebook) ───────────────────────────────────────────────
+    get isToday() {
+      return this.taskDate === new Date().toISOString().slice(0, 10);
+    },
+    get taskDateLabel() {
+      const today     = new Date().toISOString().slice(0, 10);
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const d = new Date(this.taskDate + 'T12:00:00');
+      const fmt = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+      if (this.taskDate === today)     return 'Today — ' + fmt;
+      if (this.taskDate === yesterday) return 'Yesterday — ' + fmt;
+      return d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+    },
+    get recentDays() {
+      const days = [];
+      const today = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const date = d.toISOString().slice(0, 10);
+        const j = this.todosByDate.johann[date]   || [];
+        const s = this.todosByDate.santiago[date] || [];
+        days.push({
+          date,
+          dow: d.toLocaleDateString('en-US', { weekday: 'short' }),
+          d:   d.getDate(),
+          hasEntries: j.length > 0 || s.length > 0,
+        });
+      }
+      return days;
+    },
+    prevDay() {
+      const d = new Date(this.taskDate + 'T12:00:00');
+      d.setDate(d.getDate() - 1);
+      this.taskDate = d.toISOString().slice(0, 10);
+    },
+    nextDay() {
+      if (this.isToday) return;
+      const d = new Date(this.taskDate + 'T12:00:00');
+      d.setDate(d.getDate() + 1);
+      this.taskDate = d.toISOString().slice(0, 10);
+    },
+    goToToday() {
+      this.taskDate = new Date().toISOString().slice(0, 10);
+    },
+    addTodo(person) {
+      const text = this.newTodo[person].trim();
+      if (!text) return;
+      if (!this.todosByDate[person][this.taskDate]) this.todosByDate[person][this.taskDate] = [];
+      this.todosByDate[person][this.taskDate].push({ id: Date.now(), text, done: false });
+      this.newTodo[person] = '';
+      this._saveTodos(person);
+    },
+    toggleTodo(person, id) {
+      const list = this.todosByDate[person][this.taskDate] || [];
+      const t = list.find(t => t.id === id);
+      if (t) { t.done = !t.done; this._saveTodos(person); }
+    },
+    deleteTodo(person, id) {
+      if (!this.todosByDate[person][this.taskDate]) return;
+      this.todosByDate[person][this.taskDate] = this.todosByDate[person][this.taskDate].filter(t => t.id !== id);
+      this._saveTodos(person);
+    },
+    clearDone(person) {
+      if (!this.todosByDate[person][this.taskDate]) return;
+      this.todosByDate[person][this.taskDate] = this.todosByDate[person][this.taskDate].filter(t => !t.done);
+      this._saveTodos(person);
+    },
+    _saveTodos(person) {
+      localStorage.setItem(`notebook:${person}`, JSON.stringify(this.todosByDate[person]));
+    },
+
+    // ─── Client notes ─────────────────────────────────────────────────────
+    _noteKey(c) {
+      return c.account_id || String(c.id);
+    },
+    openNote(c) {
+      const key = this._noteKey(c);
+      if (this.noteOpen === key) { this.noteOpen = null; return; }
+      this.noteOpen  = key;
+      this.noteDraft = this.clientNotes[key]?.text || '';
+    },
+    saveNote(c) {
+      const key = this._noteKey(c);
+      if (this.noteDraft.trim()) {
+        this.clientNotes[key] = { text: this.noteDraft.trim(), updatedAt: new Date().toISOString() };
+      } else {
+        delete this.clientNotes[key];
+      }
+      localStorage.setItem('clientNotes', JSON.stringify(this.clientNotes));
+      this.noteOpen = null;
+    },
+    fmtNoteDate(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      const now = new Date();
+      const diffM = Math.round((now - d) / 60000);
+      if (diffM < 1)   return 'just now';
+      if (diffM < 60)  return diffM + 'm ago';
+      if (diffM < 1440) return Math.round(diffM / 60) + 'h ago';
+      return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    },
+
+    // ─── API helpers ──────────────────────────────────────────────────────
+
+    setTimeFrame(id) {
+      this.dateRange = id;
+      this.fetchPortfolio();
+      this._startAutoRefresh();
+    },
+
+    refreshLabel() {
+      const tf = this.timeFrames.find(t => t.id === this.dateRange);
+      if (!tf) return '';
+      const mins = tf.refreshMs / 60000;
+      return mins < 60 ? `every ${mins}m` : `every ${mins / 60}h`;
+    },
+
+    _startAutoRefresh() {
+      if (this._refreshTimer) clearInterval(this._refreshTimer);
+      const tf = this.timeFrames.find(t => t.id === this.dateRange);
+      const ms = tf ? tf.refreshMs : 60 * 60 * 1000;
+      this._refreshTimer = setInterval(() => this.fetchPortfolio(), ms);
+    },
+
+    _presetFor(range) {
+      return {
+        'today':     'today',
+        'yesterday': 'yesterday',
+        '7d':        'last_7_days',
+        '14d':       'last_14_days',
+        '30d':       'last_30_days',
+      }[range] || 'last_30_days';
+    },
+
+    _fmt$(n) {
+      if (n == null || isNaN(n)) return '$0.00';
+      return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    },
+
+    _fmtReach(n) {
+      if (!n) return '0';
+      if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+      if (n >= 1_000)     return Math.round(n / 1_000) + 'K';
+      return String(n);
+    },
+
+    // Convert flat API metrics into the string shape the dashboard expects
+    _normalize(stub, m) {
+      const cpl = m.cpl != null ? m.cpl : (m.leads > 0 ? m.spend / m.leads : null);
+      return {
+        ...stub,
+        spendMTD: this._fmt$(m.spend),
+        reach:    this._fmtReach(m.reach || m.impressions),
+        leads:    m.leads    ?? stub.leads,
+        cpl:      cpl != null ? this._fmt$(cpl) : '—',
+        roas:     (m.roas && m.roas > 0) ? String(m.roas.toFixed(1)) : '—',
+        freq:     m.frequency != null ? String(m.frequency.toFixed(1)) : '—',
+        ctr:      m.ctr      ?? stub.ctr,
+        _live: true,
+      };
+    },
+
+    async fetchPortfolio() {
+      if (this.loading) return;
+      this.loading  = true;
+      this.apiError = null;
+      try {
+        const preset = this._presetFor(this.dateRange);
+        const res    = await fetch(`${this.API_BASE}/api/portfolio?preset=${preset}`);
+        if (!res.ok) throw new Error(`Backend responded ${res.status}`);
+        const data = await res.json();
+
+        this.clients = data.map(row => {
+          // If the stub isn't configured yet, keep mock data for that slot
+          if (!row.account_id || row.account_id.includes('REPLACE')) return row;
+          return this._normalize(row, row);
+        });
+
+        this.liveMode    = true;
+        this.lastUpdated = new Date();
+        this.$nextTick(() => this.initPortfolioChart());
+      } catch (e) {
+        this.apiError = e.message;
+        this.liveMode = false;
+        // Silently fall back to mock data already in this.clients
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async refreshData() {
+      await this.fetchPortfolio();
+    },
+
+    async loadClientCampaigns(c) {
+      if (this.campaignData[c.account_id]) return; // already loaded
+      this.campaignLoadingId = c.id;
+      try {
+        const res = await fetch(`${this.API_BASE}/api/client/${c.account_id}/campaigns`);
+        if (!res.ok) throw new Error(`${res.status}`);
+        const camps = await res.json();
+        this.campaignData[c.account_id] = camps;
+      } catch (e) {
+        this.campaignData[c.account_id] = [];
+      } finally {
+        this.campaignLoadingId = null;
+      }
+    },
+
+    // ─── Competitor Intel ─────────────────────────────────────────────────
+
+    async fetchCompetitors(force = false) {
+      if (this.competitorLoading) return;
+      const svc = this.competitorService;
+
+      // Non-force: serve from in-memory then localStorage
+      if (!force) {
+        if (this.competitorCache[svc]?.length) {
+          this.competitorAds = this.competitorCache[svc];
+          return;
+        }
+        const stored = localStorage.getItem(`competitors:${svc}`);
+        if (stored) {
+          try {
+            const { ads } = JSON.parse(stored);
+            if (ads?.length) {
+              this.competitorAds        = ads;
+              this.competitorCache[svc] = ads;
+              return;
+            }
+          } catch {}
+        }
+      }
+
+      // Force: fetch all 4 services in parallel, show current tab's results as they arrive
+      this.competitorLoading = true;
+      this.competitorError   = null;
+      this.competitorAds     = [];
+
+      const allServices = this.competitorServices.map(s => s.id);
+
+      const fetchOne = async (id) => {
+        const res = await fetch(`${this.API_BASE}/api/competitors?service=${id}${force ? '&force=1' : ''}`);
+        if (!res.ok) throw new Error(`Backend responded ${res.status}`);
+        const data = await res.json();
+        const ads  = data.ads || [];
+        this.competitorCache[id] = ads;
+        localStorage.setItem(`competitors:${id}`, JSON.stringify({ ads }));
+        if (id === this.competitorService) this.competitorAds = ads;
+      };
+
+      try {
+        await Promise.all(allServices.map(id => fetchOne(id).catch(e => {
+          console.warn(`competitors:${id} failed:`, e.message);
+        })));
+        // Ensure current tab shows results even if it finished before the loop
+        this.competitorAds = this.competitorCache[this.competitorService] || [];
+      } catch (e) {
+        this.competitorError = e.message;
+      } finally {
+        this.competitorLoading = false;
+      }
+    },
+
+    clientServiceCPL(c) {
+      const ceramicKw  = ['ceramic', 'coating', 'ppf', 'protection film', 'clear bra', 'nano', '9h'];
+      const detailKw   = ['detail', 'wash', 'polish', 'correction', 'interior', 'exterior', 'mobile', 'full detail', 'paint correct'];
+      let cSpend = 0, cLeads = 0, dSpend = 0, dLeads = 0;
+      for (const camp of (c.campaigns || [])) {
+        const n = (camp.name || '').toLowerCase();
+        const isCeramic = ceramicKw.some(kw => n.includes(kw));
+        const spend = parseFloat((camp.spend || '').replace(/[$,]/g, '')) || 0;
+        const leads = parseInt(camp.leads) || 0;
+        if (isCeramic) { cSpend += spend; cLeads += leads; }
+        else            { dSpend += spend; dLeads += leads; }
+      }
+      const ceramic   = cLeads > 0 ? '$' + (cSpend / cLeads).toFixed(2) : null;
+      const detailing = dLeads > 0 ? '$' + (dSpend / dLeads).toFixed(2) : null;
+      // Fall back to overall CPL when campaigns haven't been loaded yet
+      const overall = (!ceramic && !detailing && c.cpl && c.cpl !== '—') ? c.cpl : null;
+      return { ceramic, detailing, overall };
+    },
+
+    fmtSpend(ad) {
+      if (!ad.spend_lower) return '—';
+      const sym = ad.currency === 'USD' ? '$' : ad.currency + ' ';
+      const lo = parseInt(ad.spend_lower).toLocaleString();
+      const hi = ad.spend_upper ? parseInt(ad.spend_upper).toLocaleString() : null;
+      return hi ? `${sym}${lo}–${sym}${hi}` : `${sym}${lo}+`;
+    },
+
+    fmtImpressions(ad) {
+      if (!ad.impressions_lower) return '—';
+      const fmt = n => {
+        n = parseInt(n);
+        if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+        if (n >= 1_000)     return Math.round(n / 1_000) + 'K';
+        return String(n);
+      };
+      const lo = fmt(ad.impressions_lower);
+      const hi = ad.impressions_upper ? fmt(ad.impressions_upper) : null;
+      return hi ? `${lo}–${hi}` : `${lo}+`;
+    },
+
+    fmtPlatforms(platforms) {
+      if (!platforms || !platforms.length) return '';
+      return platforms.map(p => p === 'facebook' ? 'Facebook' : p === 'instagram' ? 'Instagram' : p).join(' · ');
+    },
+
+    fmtLastUpdated() {
+      if (!this.lastUpdated) return '';
+      return this.lastUpdated.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    },
+
+    init() {
+      this.$nextTick(() => {
+        this.initPortfolioChart();
+        this.fetchPortfolio();
+        this._startAutoRefresh();
+      });
+    }
+  };
+}
+</script>
+</body>
+</html>
